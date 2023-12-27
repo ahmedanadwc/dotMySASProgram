@@ -87,5 +87,14 @@ OPTIONS
 /*proc options option=sasautos; run;*/
 LIBNAME outlib "&g_outputRoot";
 
+/**
+ * Enabling Enhanced SAS Code Analysis via the SCAPROC Proc. 
+ * Possible value:0|N|1|Y|VERBOSE. Default:0  
+*/
 %let g_enableScaProc = 1;
-
+%if(&g_enableScaProc = VERBOSE) %then
+%do;
+  /* Turn on various extra logging */
+  OPTIONS 
+    MPRINT MSGLEVEL=I;
+%end;
