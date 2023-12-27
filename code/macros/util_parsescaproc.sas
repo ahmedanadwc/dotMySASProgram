@@ -329,7 +329,7 @@
     %let l_dataSteps = %substr(%superq(l_dataSteps),2);
     %let l_impExpStepsExclude = %substr(%superq(l_impExpStepsExclude),2);
 
-    %put &=l_dataSteps &=l_impExpStepsExclude;
+    /* %put &=l_dataSteps &=l_impExpStepsExclude; */
 
     PROC SORT DATA=work.scadata2(WHERE=(step in (&l_impExpStepsExclude))) OUT=work.impExp_flow;
       BY step linenum;
@@ -363,6 +363,7 @@
       END;
       if (elapsed) then OUTPUT;
     RUN;
+
     PROC SQL;
       CREATE TABLE work.impExp_flow AS
       SELECT a.step
@@ -376,6 +377,7 @@
       FULL join work.impExp_flow2(WHERE=(step IN (&l_dataSteps))) AS b
       on a.step = (b.step -1);
     QUIT;
+    
     PROC DELETE DATA=work.impExp_flow2; RUN;
   %end;
   
@@ -610,16 +612,15 @@
             OUTPUT;
           end;
           
-          CALL MISSING(in_prefix,in_suffix,out_prefix,out_suffix,prev_in,prev_out);
+          CALL MISSING(in_prefix,in_suffix,out_prefix,out_suffix,prev_in,prev_out,line);
         end;
         
         /* Single input - Single Output */
         if ((first.step = 1) AND (last.step = 1)) then
         do;
-          if (compress(in,'"')>'') then
-            line='{'||strip(in)||'} -> '||'{"'||lowcase(strip(procname))||'"}';
-          if (compress(out,'"')>'') then
-            line=strip(line)||' -> {'||strip(out)||'}';
+          if (compress(in,'"')>'') then line='{'||strip(in)||'} -> ';
+          line=strip(line)||'{"'||lowcase(strip(procname))||'"}';
+          if (compress(out,'"')>'') then line=strip(line)||' -> {'||strip(out)||'}';
 
           OUTPUT;
         end;
@@ -643,15 +644,15 @@
 
           if ((compress(in,'"')>'') AND (prev_in ne strip(in))) then
             in_prefix =strip(in_prefix)||' '||strip(in)||'}';
-          else
+          else if (strip(in_prefix) ne '') then
             in_prefix =CATS(in_prefix,'}');
           
-          line=cats(in_prefix,in_suffix);
+          line=CATS(in_prefix,in_suffix);
           OUTPUT;
 
           if ((compress(out,'"')>'') AND (prev_out ne strip(out))) then
             out_suffix = strip(out_suffix)||' '||strip(out)||'}';
-          else
+          else if (strip(out_suffix) ne '') then
             out_suffix = CATS(out_suffix,'}');
             
           line=cats(out_prefix,out_suffix);
