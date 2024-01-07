@@ -16,7 +16,7 @@
     - Code presented in
       "SCAPROC Impact Analysis - Providing QA and Compliance Insights"
       https://www.lexjansen.com/phuse/2016/tt/TT02.pdf
-      Sample 58878: SAS� Life Science Analytics Framework - 
+      Sample 58878: SAS® Life Science Analytics Framework - 
       SCAPROC Impact Analysis: Providing QA and Compliance Insights
       https://support.sas.com/kb/58/878.html
       https://support.sas.com/kb/58/047.html
