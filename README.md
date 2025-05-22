@@ -15,4 +15,5 @@ Look at [Drive:]\dotMySASProgram-main\programs\analyze_data.sas as an example pr
    Look at [Drive:]\dotMySASProgram-main\programs\util_parsescaproc_usage.sas as an example	program.
    
 A successful Step #3 execution should generate a file with DOT language syntax, describing graphs textually, so it can be rendered as a graphical representation.
+
 Open the generated DOT file in MS VS Code and use the DOT extension to draw the graph.
