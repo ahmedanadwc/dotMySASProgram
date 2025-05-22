@@ -3,7 +3,8 @@ Custom built SAS macro programs to trigger recording and extracting information 
 To get started, assuming you already have a directory of all the artifacts in the repo, you'll need to
 
 1. Update your settings by modifying the /config/setup.sas program, and populating the variable listed below, before running it in your SAS session
-%LET g_projRootPath = ; *<---- Specify installation path. Do not include trailing slash!;
+   
+   %LET g_projRootPath = ; *<---- Specify installation path. Do not include trailing slash!;
 
 2. Update your SAS program(s) before running/submitting (it/them) by the adding 
 * %util_initScaproc macro call at the beginning of the code
