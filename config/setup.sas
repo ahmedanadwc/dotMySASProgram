@@ -1,3 +1,18 @@
+/**
+  @file setup.sas
+  @brief Initializes and sets up the SAS session
+  @details 
+  Contains various SAS statements that gets executed automatically whenever a SAS session is started,
+  in order to customize the SAS session and initialize required application settings.
+
+  <h4> SAS Macros </h4>
+
+  <h4> Related Programs </h4>
+ 
+  @version SAS 9.4
+  @author Ahmed Al-Attar
+
+**/
 
 /* ----------------------------- */
 /* Define global macro variables */
