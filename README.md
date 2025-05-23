@@ -16,6 +16,6 @@ To get started, assuming you already have a directory of all the artifacts in th
    
    Look at [Drive:]\dotMySASProgram-main\programs\util_parsescaproc_usage.sas as an example	program.
    
-A successful Step #3 execution should generate a file with DOT language syntax, describing graphs textually, so it can be rendered as a graphical representation.
+A successful Step #3 execution should generate a file with DOT language syntax, describing graphs textually, so it can be rendered as a simple static data lineage graphical representation.
 
 Open the generated DOT file in MS VS Code and use the DOT extension to draw the graph.
