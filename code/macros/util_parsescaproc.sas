@@ -1,14 +1,14 @@
 /**
   @file util_parsescaproc.sas
   @brief Parses out the output generated SAS Code Analyzer.
-  @details Parses out the output generated SAS Code Analyzer, 
-  and generated *.dot output file, that could be rendered by any 
+  @details Parses out the output generated SAS Code Analyzer,
+  and generated *.dot output file, that could be rendered by any
   Graphviz (https://www.graphviz.org/) Viewer/Renderer be it
     - Web Viewer: http://webgraphviz.com/
     - VS Code extension: Graphviz (dot) language support for Visual Studio Code
       (https://marketplace.visualstudio.com/items?itemName=joaompinto.vscode-graphviz)
 
-  The inspiration for this code originted from  
+  The inspiration for this code originted from
     - Code presented in
       "Automatically create diagrams showing the structure and performance of your SAS code"
       https://support.sas.com/resources/papers/proceedings17/1104-2017.pdf
