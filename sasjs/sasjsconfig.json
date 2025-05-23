@@ -1,9 +1,9 @@
 {
   "$schema": "https://raw.githubusercontent.com/sasjs/utils/main/src/types/sasjsconfig-schema.json",
   "docConfig": {
-    "displayMacroCore": true,
+    "displayMacroCore": false,
     "outDirectory": "D:\\Projects\\SAS\\dotMySASProgram\\docs\\code",
-    "enableLineage": false,
+    "enableLineage": true,
     "doxyContent": {
     "favIcon": "favicon.ico",
     "footer": "new_footer.html",
@@ -14,12 +14,7 @@
     "path": "sasjs/doxy"
     }
   },
-  "jobConfig": {
-    "jobFolders": [
-      "code",
-      "config"      
-    ]
-  },
+  "jobConfig": {"jobFolders": ["code","config"]},
   "defaultTarget": "sasjsdoc",
   "targets": [
     {
