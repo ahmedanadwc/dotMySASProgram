@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['in_20the_20package_20json_20file_0',['Please update the &apos;name&apos; property in the package.json file',['../index.html',1,'']]]
+  ['setup_2esas_0',['setup.sas',['../setup_8sas.html',1,'']]]
 ];

@@ -24,7 +24,7 @@
 */
 var NAVTREE =
 [
-  [ "Please update the 'name' property in the package.json file", "index.html", [
+  [ "dotMySASProgram", "index.html", [
     [ "File List", "files.html", "files" ],
     [ "Lineage", "data_lineage.svg", null ]
   ] ]
