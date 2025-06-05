@@ -432,7 +432,14 @@
     /*line="graph [label=""\n\n&l_inScaprocFileName\n%sysfunc(datetime(),datetime.)""]" ;*/
     line="graph [label=""\n&l_inScaprocFileName""]" ;
     OUTPUT ;
+  %if (&l_includeAttrs_yn EQ Y) %then
+  %do;
+    line='node [shape=table color=lightblue style=filled]' ;
+  %end;
+  %else
+  %do;
     line='node [shape=cylinder color=lightblue style=filled]' ;
+  %end;
     OUTPUT ;
   RUN;
 
