@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/sasjs/utils/main/src/types/sasjsconfig-schema.json",
   "docConfig": {
     "displayMacroCore": false,
-    "outDirectory": "D:\\Projects\\SAS\\dotMySASProgram\\docs\\code",
+    "outDirectory": "C:\\Users\\ahmed\\Documents\\dotMySASProgram\\docs\\code" ,
     "enableLineage": true,
     "doxyContent": {
     "favIcon": "favicon.ico",
