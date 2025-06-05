@@ -29,6 +29,7 @@
       https://www.youtube.com/watch?v=9ea9vn7YmfM
  
   Example usage:
+  
       %util_parseScaproc(p_inScaprocFileName=
       , p_outDotFilePath=%sysfunc(pathname(WORK))
       , p_outDotFileName=mydigraph.dot

@@ -6,6 +6,7 @@
   all the generated calls to mass convert/parse sca text to a GraphVis *.dot file
 
   Example usage:
+  
       %util_scaText2graphvizDot (
         p_inTxtFileList=%str(~/dotMySASProgram/output/sca_text_files.txt)
       , p_outDotFilesDir=%str(~/dotMySASProgram/output/dotfiles_wo_attrs)
