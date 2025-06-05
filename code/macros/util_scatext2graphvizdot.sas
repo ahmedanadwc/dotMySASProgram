@@ -5,7 +5,8 @@
   composes the required %util_parseScaproc macro call for every file in the list, before executing
   all the generated calls to mass convert/parse sca text to a GraphVis *.dot file
 
-      Usage:
+  Example usage:
+  
       %util_scaText2graphvizDot (
         p_inTxtFileList=%str(~/dotMySASProgram/output/sca_text_files.txt)
       , p_outDotFilesDir=%str(~/dotMySASProgram/output/dotfiles_wo_attrs)

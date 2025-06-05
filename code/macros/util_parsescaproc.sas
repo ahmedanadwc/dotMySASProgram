@@ -28,7 +28,8 @@
       https://www.youtube.com/watch?v=Sb1DqTLgVyQ&t=182s
       https://www.youtube.com/watch?v=9ea9vn7YmfM
  
-      Usage:
+  Example usage:
+  
       %util_parseScaproc(p_inScaprocFileName=
       , p_outDotFilePath=%sysfunc(pathname(WORK))
       , p_outDotFileName=mydigraph.dot
