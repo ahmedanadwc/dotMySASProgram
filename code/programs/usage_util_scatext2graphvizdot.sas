@@ -3,7 +3,7 @@
   @brief Illustrates how to utilize the %util_initScaproc & %util_termScaproc macros
 
   <h4> SAS Macros </h4>
-	@li util_scatext2graphvizdot.sas
+  @li util_scatext2graphvizdot.sas
 
   <h4> Related Programs </h4>
  

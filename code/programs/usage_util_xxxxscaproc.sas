@@ -3,9 +3,9 @@
   @brief Illustrates how to utilize the %util_initScaproc & %util_termScaproc macros
 
   <h4> SAS Macros </h4>
-	@li util_initscaproc.sas
-	@li util_termscaproc.sas
-
+  @li util_initscaproc.sas
+  @li util_termscaproc.sas
+  
   <h4> Related Programs </h4>
  
   @version SAS 9.4

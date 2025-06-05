@@ -3,7 +3,7 @@
   @brief Illustrates how to use the util_parseScaproc macro
 
   <h4> SAS Macros </h4>
-	@li util_parsescaproc.sas
+  @li util_parsescaproc.sas
 
   <h4> Related Programs </h4>
  

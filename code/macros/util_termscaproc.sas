@@ -8,7 +8,7 @@
   by Philip Mason (phil@woodstreet.org.uk) and presented in
   https://support.sas.com/resources/papers/proceedings17/1104-2017.pdf
  
-      Usage:
+  Example usage:
       %util_termScaproc(p_enableFlagName=g_enableScaProc)
 
   @param [in] p_enableFlagName= The name of the macro variable flag to enable SAS Code Analysis logging.

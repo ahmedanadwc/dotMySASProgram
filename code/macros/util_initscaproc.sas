@@ -8,7 +8,7 @@
   by Philip Mason (phil@woodstreet.org.uk) and presented in
   https://support.sas.com/resources/papers/proceedings17/1104-2017.pdf
 
-      Usage:
+  Example usage:
       %util_initScaproc(p_enableFlagName=g_enableScaProc
       , p_outFilePath=%str(&g_logsPath)
       , p_outFileName=scaproc.txt
