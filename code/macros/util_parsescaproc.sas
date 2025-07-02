@@ -546,7 +546,7 @@
 
       DO UNTIL (last.lib_dsname);
         SET attrs_unique;
-        BY step lib_dsname;
+        BY step linenum lib_dsname;
 
         /* Output Table name */
         if (first.lib_dsname) then 
