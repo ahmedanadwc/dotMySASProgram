@@ -48,6 +48,8 @@
   @param [in] p_rankDir= Sets direction of graph layout. Valid Values:TB|BT|LR|RL.
                          Default:TB.
 
+  @n[util_parseScaproc Flow Diagram](../diagrams/util_parseScaproc.svg)
+
   @version 9.4
   @author Ahmed Al-Attar
 
@@ -536,7 +538,7 @@
     RUN;
 
     /* Ensure the entities are ordered based on their appearance in the steps */
-    PROC SORT DATA=attrs_unique;
+    PROC SORT DATA=attrs_unique NODUPKEY; *<- Added NODUPKEY;
       BY step linenum lib_dsname;
     RUN;
 
