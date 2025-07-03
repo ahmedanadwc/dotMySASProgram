@@ -1,0 +1,436 @@
+<?xml version="1.0" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="3052pt" height="318pt" viewBox="0.00 0.00 3051.79 317.6">
+<g id="graph0" class="graph" transform="translate(4,313.6000061035156) scale(1)" data-name="dag">
+
+<g id="a_graph0"><a xlink:href="util_parseScaproc_attrs.svg" xlink:title="\nutil_parseScaproc\nClick here to see tables columns">
+<polygon fill="white" stroke="none" points="-4,4 -4,-313.6 3047.79,-313.6 3047.79,4 -4,4"/>
+<text text-anchor="middle" x="1521.9" y="-25" font-family="Times,serif" font-size="14.00">util_parseScaproc</text>
+<text text-anchor="middle" x="1521.9" y="-8.2" font-family="Times,serif" font-size="14.00">Click here to see tables columns</text>
+</a>
+</g>
+
+<!-- _01_datastep -->
+<g id="node1" class="node" pointer-events="visible" data-name="_01_datastep">
+
+<ellipse fill="yellow" stroke="yellow" cx="261.33" cy="-183.6" rx="73" ry="18"/>
+<text text-anchor="middle" x="261.33" y="-179.4" font-family="Times,serif" font-size="14.00">_01_datastep ( )</text>
+</g>
+<!-- WORK.SCADATA -->
+<g id="node3" class="node" pointer-events="visible" data-name="WORK.SCADATA">
+
+<path fill="lightblue" stroke="lightblue" d="M499.16,-198.33C499.16,-200.13 470.3,-201.6 434.77,-201.6 399.24,-201.6 370.38,-200.13 370.38,-198.33 370.38,-198.33 370.38,-168.87 370.38,-168.87 370.38,-167.07 399.24,-165.6 434.77,-165.6 470.3,-165.6 499.16,-167.07 499.16,-168.87 499.16,-168.87 499.16,-198.33 499.16,-198.33"/>
+<path fill="none" stroke="lightblue" d="M499.16,-198.33C499.16,-196.52 470.3,-195.05 434.77,-195.05 399.24,-195.05 370.38,-196.52 370.38,-198.33"/>
+<text text-anchor="middle" x="434.77" y="-179.4" font-family="Times,serif" font-size="14.00">WORK.SCADATA</text>
+</g>
+<!-- _01_datastep&#45;&gt;WORK.SCADATA -->
+<g id="edge2" class="edge" data-name="_01_datastep-&gt;WORK.SCADATA">
+
+<path fill="none" stroke="black" d="M334.54,-183.6C342.56,-183.6 350.75,-183.6 358.8,-183.6"/>
+<polygon fill="black" stroke="black" points="358.57,-187.1 368.57,-183.6 358.57,-180.1 358.57,-187.1"/>
+</g>
+<!-- H:\Projects\dotmysasprograms\logs\sca__util_parseScaproc.txt --><g id="node2" class="node" pointer-events="visible" data-name="&amp;p_inScaprocFileName" data-comment="H:\Projects\dotmysasprograms\logs\sca__util_parseScaproc.txt">
+
+<polygon fill="lightgreen" stroke="lightgreen" points="146.11,-201.6 -0.04,-201.6 -0.04,-165.6 152.11,-165.6 152.11,-195.6 146.11,-201.6"/>
+<polyline fill="none" stroke="lightgreen" points="146.11,-201.6 146.11,-195.6"/>
+<polyline fill="none" stroke="lightgreen" points="152.11,-195.6 146.11,-195.6"/>
+<text text-anchor="middle" x="76.04" y="-179.4" font-family="Times,serif" font-size="14.00">&amp;p_inScaprocFileName</text>
+</g>
+
+<!-- H:\Projects\dotmysasprograms\logs\sca__util_parseScaproc.txt&#45;&gt;_01_datastep --><g id="edge1" class="edge" data-name="&amp;p_inScaprocFileName-&gt;_01_datastep" data-comment="H:\Projects\dotmysasprograms\logs\sca__util_parseScaproc.txt-&gt;_01_datastep">
+
+<path fill="none" stroke="black" d="M152.38,-183.6C160.37,-183.6 168.52,-183.6 176.6,-183.6"/>
+<polygon fill="black" stroke="black" points="176.42,-187.1 186.42,-183.6 176.42,-180.1 176.42,-187.1"/>
+</g>
+
+<!-- _02_datastep -->
+<g id="node4" class="node" pointer-events="visible" data-name="_02_datastep">
+
+<ellipse fill="yellow" stroke="yellow" cx="608.22" cy="-183.6" rx="73" ry="18"/>
+<text text-anchor="middle" x="608.22" y="-179.4" font-family="Times,serif" font-size="14.00">_02_datastep ( )</text>
+</g>
+<!-- WORK.SCADATA&#45;&gt;_02_datastep -->
+<g id="edge3" class="edge" data-name="WORK.SCADATA-&gt;_02_datastep">
+
+<path fill="none" stroke="black" d="M499.61,-183.6C507.44,-183.6 515.53,-183.6 523.6,-183.6"/>
+<polygon fill="black" stroke="black" points="523.44,-187.1 533.44,-183.6 523.44,-180.1 523.44,-187.1"/>
+</g>
+<!-- WORK.SCADATA1 -->
+<g id="node5" class="node" pointer-events="visible" data-name="WORK.SCADATA1">
+
+<path fill="lightblue" stroke="lightblue" d="M853.05,-198.33C853.05,-200.13 822.62,-201.6 785.16,-201.6 747.7,-201.6 717.27,-200.13 717.27,-198.33 717.27,-198.33 717.27,-168.87 717.27,-168.87 717.27,-167.07 747.7,-165.6 785.16,-165.6 822.62,-165.6 853.05,-167.07 853.05,-168.87 853.05,-168.87 853.05,-198.33 853.05,-198.33"/>
+<path fill="none" stroke="lightblue" d="M853.05,-198.33C853.05,-196.52 822.62,-195.05 785.16,-195.05 747.7,-195.05 717.27,-196.52 717.27,-198.33"/>
+<text text-anchor="middle" x="785.16" y="-179.4" font-family="Times,serif" font-size="14.00">WORK.SCADATA1</text>
+</g>
+<!-- _02_datastep&#45;&gt;WORK.SCADATA1 -->
+<g id="edge4" class="edge" data-name="_02_datastep-&gt;WORK.SCADATA1">
+
+<path fill="none" stroke="black" d="M681.64,-183.6C689.47,-183.6 697.47,-183.6 705.37,-183.6"/>
+<polygon fill="black" stroke="black" points="705.33,-187.1 715.33,-183.6 705.33,-180.1 705.33,-187.1"/>
+</g>
+<!-- _03_datastep -->
+<g id="node6" class="node" pointer-events="visible" data-name="_03_datastep">
+
+<ellipse fill="yellow" stroke="yellow" cx="962.11" cy="-206.6" rx="73" ry="18"/>
+<text text-anchor="middle" x="962.11" y="-202.4" font-family="Times,serif" font-size="14.00">_03_datastep ( )</text>
+</g>
+<!-- WORK.SCADATA1&#45;&gt;_03_datastep -->
+<g id="edge5" class="edge" data-name="WORK.SCADATA1-&gt;_03_datastep">
+
+<path fill="none" stroke="black" d="M853.55,-192.46C864.01,-193.83 874.88,-195.26 885.51,-196.66"/>
+<polygon fill="black" stroke="black" points="885.04,-200.13 895.42,-197.96 885.96,-193.19 885.04,-200.13"/>
+</g>
+<!-- _04_datastep -->
+<g id="node8" class="node" pointer-events="visible" data-name="_04_datastep">
+
+<ellipse fill="yellow" stroke="yellow" cx="1333.89" cy="-183.6" rx="73" ry="18"/>
+<text text-anchor="middle" x="1333.89" y="-179.4" font-family="Times,serif" font-size="14.00">_04_datastep ( )</text>
+</g>
+<!-- WORK.SCADATA1&#45;&gt;_04_datastep -->
+<g id="edge7" class="edge" data-name="WORK.SCADATA1-&gt;_04_datastep">
+
+<path fill="none" stroke="black" d="M853.54,-180.6C865.31,-180.18 877.44,-179.82 888.86,-179.6 1038.06,-176.7 1075.43,-176.84 1224.64,-179.6 1232.94,-179.75 1241.6,-179.97 1250.24,-180.23"/>
+<polygon fill="black" stroke="black" points="1249.95,-183.72 1260.05,-180.54 1250.17,-176.73 1249.95,-183.72"/>
+</g>
+<!-- WORK.CONCATMEM -->
+<g id="node7" class="node" pointer-events="visible" data-name="WORK.CONCATMEM">
+
+<path fill="lightblue" stroke="lightblue" d="M1224.78,-221.33C1224.78,-223.13 1190.36,-224.6 1148,-224.6 1105.63,-224.6 1071.22,-223.13 1071.22,-221.33 1071.22,-221.33 1071.22,-191.87 1071.22,-191.87 1071.22,-190.07 1105.63,-188.6 1148,-188.6 1190.36,-188.6 1224.78,-190.07 1224.78,-191.87 1224.78,-191.87 1224.78,-221.33 1224.78,-221.33"/>
+<path fill="none" stroke="lightblue" d="M1224.78,-221.33C1224.78,-219.52 1190.36,-218.05 1148,-218.05 1105.63,-218.05 1071.22,-219.52 1071.22,-221.33"/>
+<text text-anchor="middle" x="1148" y="-202.4" font-family="Times,serif" font-size="14.00">WORK.CONCATMEM</text>
+</g>
+<!-- _03_datastep&#45;&gt;WORK.CONCATMEM -->
+<g id="edge6" class="edge" data-name="_03_datastep-&gt;WORK.CONCATMEM">
+
+<path fill="none" stroke="black" d="M1035.52,-206.6C1043.45,-206.6 1051.57,-206.6 1059.65,-206.6"/>
+<polygon fill="black" stroke="black" points="1059.5,-210.1 1069.5,-206.6 1059.5,-203.1 1059.5,-210.1"/>
+</g>
+<!-- WORK.CONCATMEM&#45;&gt;_04_datastep -->
+<g id="edge8" class="edge" data-name="WORK.CONCATMEM-&gt;_04_datastep">
+
+<path fill="none" stroke="black" d="M1225.12,-197.08C1235.57,-195.77 1246.3,-194.43 1256.75,-193.12"/>
+<polygon fill="black" stroke="black" points="1256.96,-196.62 1266.45,-191.91 1256.09,-189.68 1256.96,-196.62"/>
+</g>
+<!-- WORK.ATTRS -->
+<g id="node9" class="node" pointer-events="visible" data-name="WORK.ATTRS">
+
+<path fill="lightblue" stroke="lightblue" d="M1563.94,-252.33C1563.94,-254.13 1540.14,-255.6 1510.83,-255.6 1481.53,-255.6 1457.72,-254.13 1457.72,-252.33 1457.72,-252.33 1457.72,-222.87 1457.72,-222.87 1457.72,-221.07 1481.53,-219.6 1510.83,-219.6 1540.14,-219.6 1563.94,-221.07 1563.94,-222.87 1563.94,-222.87 1563.94,-252.33 1563.94,-252.33"/>
+<path fill="none" stroke="lightblue" d="M1563.94,-252.33C1563.94,-250.52 1540.14,-249.05 1510.83,-249.05 1481.53,-249.05 1457.72,-250.52 1457.72,-252.33"/>
+<text text-anchor="middle" x="1510.83" y="-233.4" font-family="Times,serif" font-size="14.00">WORK.ATTRS</text>
+</g>
+<!-- _04_datastep&#45;&gt;WORK.ATTRS -->
+<g id="edge9" class="edge" data-name="_04_datastep-&gt;WORK.ATTRS">
+
+<path fill="none" stroke="black" d="M1380.85,-197.79C1400.94,-203.99 1424.84,-211.37 1446.57,-218.07"/>
+<polygon fill="black" stroke="black" points="1445.34,-221.36 1455.93,-220.96 1447.4,-214.67 1445.34,-221.36"/>
+</g>
+<!-- WORK.SCADATA2 -->
+<g id="node10" class="node" pointer-events="visible" data-name="WORK.SCADATA2">
+
+<path fill="lightblue" stroke="lightblue" d="M1578.72,-171.33C1578.72,-173.13 1548.29,-174.6 1510.83,-174.6 1473.37,-174.6 1442.94,-173.13 1442.94,-171.33 1442.94,-171.33 1442.94,-141.87 1442.94,-141.87 1442.94,-140.07 1473.37,-138.6 1510.83,-138.6 1548.29,-138.6 1578.72,-140.07 1578.72,-141.87 1578.72,-141.87 1578.72,-171.33 1578.72,-171.33"/>
+<path fill="none" stroke="lightblue" d="M1578.72,-171.33C1578.72,-169.52 1548.29,-168.05 1510.83,-168.05 1473.37,-168.05 1442.94,-169.52 1442.94,-171.33"/>
+<text text-anchor="middle" x="1510.83" y="-152.4" font-family="Times,serif" font-size="14.00">WORK.SCADATA2</text>
+</g>
+<!-- _04_datastep&#45;&gt;WORK.SCADATA2 -->
+<g id="edge10" class="edge" data-name="_04_datastep-&gt;WORK.SCADATA2">
+
+<path fill="none" stroke="black" d="M1396.57,-174.08C1407.82,-172.34 1419.71,-170.51 1431.37,-168.71"/>
+<polygon fill="black" stroke="black" points="1431.62,-172.21 1440.97,-167.23 1430.55,-165.29 1431.62,-172.21"/>
+</g>
+<!-- _13_sort -->
+<g id="node19" class="node" pointer-events="visible" data-name="_13_sort">
+
+<ellipse fill="yellow" stroke="yellow" cx="1687.78" cy="-237.6" rx="56.19" ry="18"/>
+<text text-anchor="middle" x="1687.78" y="-233.4" font-family="Times,serif" font-size="14.00">_13_sort ( )</text>
+</g>
+<!-- WORK.ATTRS&#45;&gt;_13_sort -->
+<g id="edge20" class="edge" data-name="WORK.ATTRS-&gt;_13_sort">
+
+<path fill="none" stroke="black" d="M1564.32,-231.35C1582.83,-230.79 1603.84,-230.7 1623.16,-231.08"/>
+<polygon fill="black" stroke="black" points="1623.03,-234.58 1633.11,-231.33 1623.2,-227.58 1623.03,-234.58"/>
+</g>
+<!-- _14_datastep -->
+<g id="node20" class="node" pointer-events="visible" data-name="_14_datastep">
+
+<ellipse fill="yellow" stroke="yellow" cx="1687.78" cy="-291.6" rx="73" ry="18"/>
+<text text-anchor="middle" x="1687.78" y="-287.4" font-family="Times,serif" font-size="14.00">_14_datastep ( )</text>
+</g>
+<!-- WORK.ATTRS&#45;&gt;_14_datastep -->
+<g id="edge22" class="edge" data-name="WORK.ATTRS-&gt;_14_datastep">
+
+<path fill="none" stroke="black" d="M1564.32,-253.8C1585.06,-260.2 1608.94,-267.58 1630.08,-274.1"/>
+<polygon fill="black" stroke="black" points="1628.82,-277.37 1639.4,-276.98 1630.88,-270.68 1628.82,-277.37"/>
+</g>
+<!-- _06_sql -->
+<g id="node11" class="node" pointer-events="visible" data-name="_06_sql">
+
+<ellipse fill="yellow" stroke="yellow" cx="1687.78" cy="-75.6" rx="52.76" ry="18"/>
+<text text-anchor="middle" x="1687.78" y="-71.4" font-family="Times,serif" font-size="14.00">_06_sql ( )</text>
+</g>
+<!-- WORK.SCADATA2&#45;&gt;_06_sql -->
+<g id="edge11" class="edge" data-name="WORK.SCADATA2-&gt;_06_sql">
+
+<path fill="none" stroke="black" d="M1544.15,-138.26C1564.11,-127.27 1590.44,-113.38 1614.53,-102.6 1622.34,-99.1 1630.77,-95.66 1639,-92.48"/>
+<polygon fill="black" stroke="black" points="1640.13,-95.79 1648.24,-88.98 1637.65,-89.25 1640.13,-95.79"/>
+</g>
+<!-- _07_sql -->
+<g id="node12" class="node" pointer-events="visible" data-name="_07_sql">
+
+<ellipse fill="yellow" stroke="yellow" cx="1687.78" cy="-183.6" rx="52.76" ry="18"/>
+<text text-anchor="middle" x="1687.78" y="-179.4" font-family="Times,serif" font-size="14.00">_07_sql ( )</text>
+</g>
+<!-- WORK.SCADATA2&#45;&gt;_07_sql -->
+<g id="edge12" class="edge" data-name="WORK.SCADATA2-&gt;_07_sql">
+
+<path fill="none" stroke="black" d="M1579.22,-167C1595.25,-169.47 1612.24,-172.1 1627.86,-174.51"/>
+<polygon fill="black" stroke="black" points="1627.05,-177.92 1637.46,-175.99 1628.11,-171 1627.05,-177.92"/>
+</g>
+<!-- _09_sql -->
+<g id="node14" class="node" pointer-events="visible" data-name="_09_sql">
+
+<ellipse fill="yellow" stroke="yellow" cx="1687.78" cy="-129.6" rx="52.76" ry="18"/>
+<text text-anchor="middle" x="1687.78" y="-125.4" font-family="Times,serif" font-size="14.00">_09_sql ( )</text>
+</g>
+<!-- WORK.SCADATA2&#45;&gt;_09_sql -->
+<g id="edge15" class="edge" data-name="WORK.SCADATA2-&gt;_09_sql">
+
+<path fill="none" stroke="black" d="M1579.22,-146.2C1595.25,-143.73 1612.24,-141.1 1627.86,-138.69"/>
+<polygon fill="black" stroke="black" points="1628.11,-142.2 1637.46,-137.21 1627.05,-135.28 1628.11,-142.2"/>
+</g>
+<!-- _05_delete -->
+
+<!-- WORK.WITH_KNOWN_OUT -->
+<g id="node13" class="node" pointer-events="visible" data-name="WORK.WITH_KNOWN_OUT">
+
+<path fill="lightblue" stroke="lightblue" d="M1992.38,-198.33C1992.38,-200.13 1948.58,-201.6 1894.65,-201.6 1840.72,-201.6 1796.91,-200.13 1796.91,-198.33 1796.91,-198.33 1796.91,-168.87 1796.91,-168.87 1796.91,-167.07 1840.72,-165.6 1894.65,-165.6 1948.58,-165.6 1992.38,-167.07 1992.38,-168.87 1992.38,-168.87 1992.38,-198.33 1992.38,-198.33"/>
+<path fill="none" stroke="lightblue" d="M1992.38,-198.33C1992.38,-196.52 1948.58,-195.05 1894.65,-195.05 1840.72,-195.05 1796.91,-196.52 1796.91,-198.33"/>
+<text text-anchor="middle" x="1894.65" y="-179.4" font-family="Times,serif" font-size="14.00">WORK.WITH_KNOWN_OUT</text>
+</g>
+<!-- _07_sql&#45;&gt;WORK.WITH_KNOWN_OUT -->
+<g id="edge14" class="edge" data-name="_07_sql-&gt;WORK.WITH_KNOWN_OUT">
+
+<path fill="none" stroke="black" d="M1738.11,-177.73C1752.44,-177.21 1768.69,-176.92 1785.15,-176.86"/>
+<polygon fill="black" stroke="black" points="1785.05,-180.36 1795.05,-176.86 1785.05,-173.36 1785.05,-180.36"/>
+</g>
+<!-- WORK.WITH_KNOWN_OUT&#45;&gt;_07_sql -->
+<g id="edge13" class="edge" data-name="WORK.WITH_KNOWN_OUT-&gt;_07_sql">
+
+<path fill="none" stroke="black" d="M1796.56,-190.34C1780.41,-190.39 1764.09,-190.22 1749.19,-189.82"/>
+<polygon fill="black" stroke="black" points="1749.73,-186.33 1739.62,-189.52 1749.51,-193.33 1749.73,-186.33"/>
+</g>
+<!-- _08_delete -->
+
+<!-- WORK.FLOW -->
+<g id="node15" class="node" pointer-events="visible" data-name="WORK.FLOW">
+
+<path fill="lightblue" stroke="lightblue" d="M1945.58,-144.33C1945.58,-146.13 1922.75,-147.6 1894.65,-147.6 1866.54,-147.6 1843.71,-146.13 1843.71,-144.33 1843.71,-144.33 1843.71,-114.87 1843.71,-114.87 1843.71,-113.07 1866.54,-111.6 1894.65,-111.6 1922.75,-111.6 1945.58,-113.07 1945.58,-114.87 1945.58,-114.87 1945.58,-144.33 1945.58,-144.33"/>
+<path fill="none" stroke="lightblue" d="M1945.58,-144.33C1945.58,-142.52 1922.75,-141.05 1894.65,-141.05 1866.54,-141.05 1843.71,-142.52 1843.71,-144.33"/>
+<text text-anchor="middle" x="1894.65" y="-125.4" font-family="Times,serif" font-size="14.00">WORK.FLOW</text>
+</g>
+<!-- _09_sql&#45;&gt;WORK.FLOW -->
+<g id="edge16" class="edge" data-name="_09_sql-&gt;WORK.FLOW">
+
+<path fill="none" stroke="black" d="M1741,-129.6C1768.74,-129.6 1803,-129.6 1832.03,-129.6"/>
+<polygon fill="black" stroke="black" points="1831.77,-133.1 1841.77,-129.6 1831.77,-126.1 1831.77,-133.1"/>
+</g>
+<!-- _10_sort -->
+<g id="node16" class="node" pointer-events="visible" data-name="_10_sort">
+
+<ellipse fill="yellow" stroke="yellow" cx="2101.52" cy="-129.6" rx="56.19" ry="18"/>
+<text text-anchor="middle" x="2101.52" y="-125.4" font-family="Times,serif" font-size="14.00">_10_sort ( )</text>
+</g>
+<!-- WORK.FLOW&#45;&gt;_10_sort -->
+<g id="edge17" class="edge" data-name="WORK.FLOW-&gt;_10_sort">
+
+<path fill="none" stroke="black" d="M1946.03,-123.69C1973.43,-122.72 2007.6,-122.59 2036.83,-123.3"/>
+<polygon fill="black" stroke="black" points="2036.58,-126.79 2046.67,-123.58 2036.78,-119.8 2036.58,-126.79"/>
+</g>
+<!-- _19_datastep -->
+<g id="node26" class="node" pointer-events="visible" data-name="_19_datastep">
+
+<ellipse fill="yellow" stroke="yellow" cx="2101.52" cy="-183.6" rx="73" ry="18"/>
+<text text-anchor="middle" x="2101.52" y="-179.4" font-family="Times,serif" font-size="14.00">_19_datastep ( )</text>
+</g>
+<!-- WORK.FLOW&#45;&gt;_19_datastep -->
+<g id="edge30" class="edge" data-name="WORK.FLOW-&gt;_19_datastep">
+
+<path fill="none" stroke="black" d="M1946.03,-142.88C1974.18,-150.3 2009.48,-159.6 2039.23,-167.45"/>
+<polygon fill="black" stroke="black" points="2038.31,-170.82 2048.87,-169.99 2040.09,-164.05 2038.31,-170.82"/>
+</g>
+<!-- _10_sort&#45;&gt;WORK.FLOW -->
+<g id="edge18" class="edge" data-name="_10_sort-&gt;WORK.FLOW">
+
+<path fill="none" stroke="black" d="M2048.19,-135.57C2020.47,-136.51 1986.26,-136.6 1957.27,-135.85"/>
+<polygon fill="black" stroke="black" points="1957.64,-132.36 1947.54,-135.55 1957.43,-139.36 1957.64,-132.36"/>
+</g>
+<!-- _11_delete -->
+
+<!-- _12_datastep -->
+<g id="node17" class="node" pointer-events="visible" data-name="_12_datastep">
+
+<ellipse fill="yellow" stroke="yellow" cx="2473.29" cy="-129.6" rx="73" ry="18"/>
+<text text-anchor="middle" x="2473.29" y="-125.4" font-family="Times,serif" font-size="14.00">_12_datastep ( )</text>
+</g>
+<!-- WORK.UTIL_PARSESCAPROC --><g id="node18" class="node" pointer-events="visible" data-name="&amp;p_outDsName" data-comment="WORK.UTIL_PARSESCAPROC">
+
+<path fill="lightblue" stroke="lightblue" d="M2690.19,-171.33C2690.19,-173.13 2666.09,-174.6 2636.42,-174.6 2606.75,-174.6 2582.66,-173.13 2582.66,-171.33 2582.66,-171.33 2582.66,-141.87 2582.66,-141.87 2582.66,-140.07 2606.75,-138.6 2636.42,-138.6 2666.09,-138.6 2690.19,-140.07 2690.19,-141.87 2690.19,-141.87 2690.19,-171.33 2690.19,-171.33"/>
+<path fill="none" stroke="lightblue" d="M2690.19,-171.33C2690.19,-169.52 2666.09,-168.05 2636.42,-168.05 2606.75,-168.05 2582.66,-169.52 2582.66,-171.33"/>
+<text text-anchor="middle" x="2636.42" y="-152.4" font-family="Times,serif" font-size="14.00">&amp;p_outDsName</text>
+</g>
+
+<!-- _12_datastep&#45;&gt;WORK.UTIL_PARSESCAPROC --><g id="edge19" class="edge" data-name="_12_datastep-&gt;&amp;p_outDsName" data-comment="_12_datastep-&gt;WORK.UTIL_PARSESCAPROC">
+
+<path fill="none" stroke="black" d="M2534.75,-139.73C2546.59,-141.72 2559.05,-143.8 2571.02,-145.81"/>
+<polygon fill="black" stroke="black" points="2570.37,-149.25 2580.81,-147.45 2571.53,-142.34 2570.37,-149.25"/>
+</g>
+
+<!-- _20_datastep -->
+<g id="node29" class="node" pointer-events="visible" data-name="_20_datastep">
+
+<ellipse fill="yellow" stroke="yellow" cx="2799.55" cy="-106.6" rx="73" ry="18"/>
+<text text-anchor="middle" x="2799.55" y="-102.4" font-family="Times,serif" font-size="14.00">_20_datastep ( )</text>
+</g>
+<!-- WORK.UTIL_PARSESCAPROC&#45;&gt;_20_datastep --><g id="edge33" class="edge" data-name="&amp;p_outDsName-&gt;_20_datastep" data-comment="WORK.UTIL_PARSESCAPROC-&gt;_20_datastep">
+
+<path fill="none" stroke="black" d="M2690.63,-140.09C2707.1,-134.98 2725.3,-129.33 2741.98,-124.15"/>
+<polygon fill="black" stroke="black" points="2742.74,-127.58 2751.25,-121.28 2740.66,-120.9 2742.74,-127.58"/>
+</g>
+
+<!-- _13_sort&#45;&gt;WORK.ATTRS -->
+<g id="edge21" class="edge" data-name="_13_sort-&gt;WORK.ATTRS">
+
+<path fill="none" stroke="black" d="M1634.63,-243.83C1616.15,-244.4 1595.15,-244.5 1575.8,-244.13"/>
+<polygon fill="black" stroke="black" points="1575.92,-240.63 1565.83,-243.88 1575.74,-247.63 1575.92,-240.63"/>
+</g>
+<!-- WORK.ATTRS_UNIQUE -->
+<g id="node21" class="node" pointer-events="visible" data-name="WORK.ATTRS_UNIQUE">
+
+<path fill="lightblue" stroke="lightblue" d="M1978.41,-306.33C1978.41,-308.13 1940.87,-309.6 1894.65,-309.6 1848.43,-309.6 1810.88,-308.13 1810.88,-306.33 1810.88,-306.33 1810.88,-276.87 1810.88,-276.87 1810.88,-275.07 1848.43,-273.6 1894.65,-273.6 1940.87,-273.6 1978.41,-275.07 1978.41,-276.87 1978.41,-276.87 1978.41,-306.33 1978.41,-306.33"/>
+<path fill="none" stroke="lightblue" d="M1978.41,-306.33C1978.41,-304.52 1940.87,-303.05 1894.65,-303.05 1848.43,-303.05 1810.88,-304.52 1810.88,-306.33"/>
+<text text-anchor="middle" x="1894.65" y="-287.4" font-family="Times,serif" font-size="14.00">WORK.ATTRS_UNIQUE</text>
+</g>
+<!-- _14_datastep&#45;&gt;WORK.ATTRS_UNIQUE -->
+<g id="edge23" class="edge" data-name="_14_datastep-&gt;WORK.ATTRS_UNIQUE">
+
+<path fill="none" stroke="black" d="M1761.01,-291.6C1773.39,-291.6 1786.42,-291.6 1799.28,-291.6"/>
+<polygon fill="black" stroke="black" points="1799.01,-295.1 1809.01,-291.6 1799.01,-288.1 1799.01,-295.1"/>
+</g>
+<!-- _15_sort -->
+<g id="node22" class="node" pointer-events="visible" data-name="_15_sort">
+
+<ellipse fill="yellow" stroke="yellow" cx="2101.52" cy="-291.6" rx="56.19" ry="18"/>
+<text text-anchor="middle" x="2101.52" y="-287.4" font-family="Times,serif" font-size="14.00">_15_sort ( )</text>
+</g>
+<!-- WORK.ATTRS_UNIQUE&#45;&gt;_15_sort -->
+<g id="edge24" class="edge" data-name="WORK.ATTRS_UNIQUE-&gt;_15_sort">
+
+<path fill="none" stroke="black" d="M1978.68,-284.96C1997.97,-284.74 2018.21,-284.85 2036.53,-285.29"/>
+<polygon fill="black" stroke="black" points="2036.36,-288.79 2046.45,-285.58 2036.56,-281.79 2036.36,-288.79"/>
+</g>
+<!-- _16_datastep -->
+<g id="node23" class="node" pointer-events="visible" data-name="_16_datastep">
+
+<ellipse fill="yellow" stroke="yellow" cx="2101.52" cy="-237.6" rx="73" ry="18"/>
+<text text-anchor="middle" x="2101.52" y="-233.4" font-family="Times,serif" font-size="14.00">_16_datastep ( )</text>
+</g>
+<!-- WORK.ATTRS_UNIQUE&#45;&gt;_16_datastep -->
+<g id="edge26" class="edge" data-name="WORK.ATTRS_UNIQUE-&gt;_16_datastep">
+
+<path fill="none" stroke="black" d="M1962.44,-273.99C1987.25,-267.45 2015.25,-260.08 2039.51,-253.68"/>
+<polygon fill="black" stroke="black" points="2040.13,-257.14 2048.91,-251.2 2038.35,-250.37 2040.13,-257.14"/>
+</g>
+<!-- _15_sort&#45;&gt;WORK.ATTRS_UNIQUE -->
+<g id="edge25" class="edge" data-name="_15_sort-&gt;WORK.ATTRS_UNIQUE">
+
+<path fill="none" stroke="black" d="M2047.97,-297.58C2030.26,-298.17 2009.93,-298.42 1990.01,-298.33"/>
+<polygon fill="black" stroke="black" points="1990.22,-294.83 1980.19,-298.25 1990.16,-301.83 1990.22,-294.83"/>
+</g>
+<!-- WORK.ATTRS_LINES -->
+<g id="node24" class="node" pointer-events="visible" data-name="WORK.ATTRS_LINES">
+
+<path fill="lightblue" stroke="lightblue" d="M2364.17,-252.33C2364.17,-254.13 2329.76,-255.6 2287.4,-255.6 2245.04,-255.6 2210.63,-254.13 2210.63,-252.33 2210.63,-252.33 2210.63,-222.87 2210.63,-222.87 2210.63,-221.07 2245.04,-219.6 2287.4,-219.6 2329.76,-219.6 2364.17,-221.07 2364.17,-222.87 2364.17,-222.87 2364.17,-252.33 2364.17,-252.33"/>
+<path fill="none" stroke="lightblue" d="M2364.17,-252.33C2364.17,-250.52 2329.76,-249.05 2287.4,-249.05 2245.04,-249.05 2210.63,-250.52 2210.63,-252.33"/>
+<text text-anchor="middle" x="2287.4" y="-233.4" font-family="Times,serif" font-size="14.00">WORK.ATTRS_LINES</text>
+</g>
+<!-- _16_datastep&#45;&gt;WORK.ATTRS_LINES -->
+<g id="edge27" class="edge" data-name="_16_datastep-&gt;WORK.ATTRS_LINES">
+
+<path fill="none" stroke="black" d="M2174.93,-237.6C2182.85,-237.6 2190.98,-237.6 2199.06,-237.6"/>
+<polygon fill="black" stroke="black" points="2198.91,-241.1 2208.91,-237.6 2198.91,-234.1 2198.91,-241.1"/>
+</g>
+<!-- _17_append -->
+<g id="node25" class="node" pointer-events="visible" data-name="_17_append">
+
+<ellipse fill="yellow" stroke="yellow" cx="2473.29" cy="-237.6" rx="69.49" ry="18"/>
+<text text-anchor="middle" x="2473.29" y="-233.4" font-family="Times,serif" font-size="14.00">_17_append ( )</text>
+</g>
+<!-- WORK.ATTRS_LINES&#45;&gt;_17_append -->
+<g id="edge28" class="edge" data-name="WORK.ATTRS_LINES-&gt;_17_append">
+
+<path fill="none" stroke="black" d="M2364.52,-237.6C2373.62,-237.6 2382.94,-237.6 2392.09,-237.6"/>
+<polygon fill="black" stroke="black" points="2392.07,-241.1 2402.07,-237.6 2392.07,-234.1 2392.07,-241.1"/>
+</g>
+<!-- _17_append&#45;&gt;WORK.UTIL_PARSESCAPROC --><g id="edge29" class="edge" data-name="_17_append-&gt;&amp;p_outDsName" data-comment="_17_append-&gt;WORK.UTIL_PARSESCAPROC">
+
+<path fill="none" stroke="black" d="M2516.87,-223.21C2526.76,-219.45 2537.14,-215.16 2546.54,-210.6 2566.91,-200.72 2588.65,-187.56 2605.53,-176.71"/>
+<polygon fill="black" stroke="black" points="2607.12,-179.84 2613.59,-171.45 2603.3,-173.98 2607.12,-179.84"/>
+</g>
+
+<!-- _18_delete -->
+
+<!-- WORK.FLOW_LINES -->
+<g id="node28" class="node" pointer-events="visible" data-name="WORK.FLOW_LINES">
+
+<path fill="lightblue" stroke="lightblue" d="M2361.5,-198.33C2361.5,-200.13 2328.29,-201.6 2287.4,-201.6 2246.52,-201.6 2213.3,-200.13 2213.3,-198.33 2213.3,-198.33 2213.3,-168.87 2213.3,-168.87 2213.3,-167.07 2246.52,-165.6 2287.4,-165.6 2328.29,-165.6 2361.5,-167.07 2361.5,-168.87 2361.5,-168.87 2361.5,-198.33 2361.5,-198.33"/>
+<path fill="none" stroke="lightblue" d="M2361.5,-198.33C2361.5,-196.52 2328.29,-195.05 2287.4,-195.05 2246.52,-195.05 2213.3,-196.52 2213.3,-198.33"/>
+<text text-anchor="middle" x="2287.4" y="-179.4" font-family="Times,serif" font-size="14.00">WORK.FLOW_LINES</text>
+</g>
+<!-- _19_datastep&#45;&gt;WORK.FLOW_LINES -->
+<g id="edge32" class="edge" data-name="_19_datastep-&gt;WORK.FLOW_LINES">
+
+<path fill="none" stroke="black" d="M2174.93,-183.6C2183.69,-183.6 2192.7,-183.6 2201.62,-183.6"/>
+<polygon fill="black" stroke="black" points="2201.33,-187.1 2211.33,-183.6 2201.33,-180.1 2201.33,-187.1"/>
+</g>
+<!-- WORK.EXT_FILES -->
+<g id="node27" class="node" pointer-events="visible" data-name="WORK.EXT_FILES">
+
+<path fill="lightblue" stroke="lightblue" d="M1961.47,-252.33C1961.47,-254.13 1931.52,-255.6 1894.65,-255.6 1857.77,-255.6 1827.82,-254.13 1827.82,-252.33 1827.82,-252.33 1827.82,-222.87 1827.82,-222.87 1827.82,-221.07 1857.77,-219.6 1894.65,-219.6 1931.52,-219.6 1961.47,-221.07 1961.47,-222.87 1961.47,-222.87 1961.47,-252.33 1961.47,-252.33"/>
+<path fill="none" stroke="lightblue" d="M1961.47,-252.33C1961.47,-250.52 1931.52,-249.05 1894.65,-249.05 1857.77,-249.05 1827.82,-250.52 1827.82,-252.33"/>
+<text text-anchor="middle" x="1894.65" y="-233.4" font-family="Times,serif" font-size="14.00">WORK.EXT_FILES</text>
+</g>
+<!-- WORK.EXT_FILES&#45;&gt;_19_datastep -->
+<g id="edge31" class="edge" data-name="WORK.EXT_FILES-&gt;_19_datastep">
+
+<path fill="none" stroke="black" d="M1960.19,-220.59C1985.52,-213.91 2014.46,-206.28 2039.45,-199.69"/>
+<polygon fill="black" stroke="black" points="2040.02,-203.16 2048.8,-197.23 2038.24,-196.4 2040.02,-203.16"/>
+</g>
+<!-- WORK.FLOW_LINES&#45;&gt;_20_datastep -->
+<g id="edge34" class="edge" data-name="WORK.FLOW_LINES-&gt;_20_datastep">
+
+<path fill="none" stroke="black" d="M2306.07,-165.16C2326.51,-145.29 2362.23,-114.87 2400.04,-102.6 2511.76,-66.34 2650.56,-79.93 2731.39,-93.2"/>
+<polygon fill="black" stroke="black" points="2730.47,-96.59 2740.91,-94.81 2731.64,-89.69 2730.47,-96.59"/>
+</g>
+<!-- _21_append -->
+<g id="node31" class="node" pointer-events="visible" data-name="_21_append">
+
+<ellipse fill="yellow" stroke="yellow" cx="2473.29" cy="-183.6" rx="69.49" ry="18"/>
+<text text-anchor="middle" x="2473.29" y="-179.4" font-family="Times,serif" font-size="14.00">_21_append ( )</text>
+</g><g id="edge36" class="edge" data-name="WORK.FLOW_LINES-&gt;_21_append" data-comment="_21_append">
+
+<path fill="none" stroke="black" d="M2361.87,-183.6C2371.83,-183.6 2382.09,-183.6 2392.16,-183.6"/>
+<polygon fill="black" stroke="black" points="2391.9,-187.1 2401.9,-183.6 2391.9,-180.1 2391.9,-187.1"/>
+</g><g id="node30" class="node" pointer-events="visible" data-name="&amp;p_outDotFileName" data-comment="_21_append">
+
+<polygon fill="lightgreen" stroke="lightgreen" points="3037.78,-124.6 2908.81,-124.6 2908.81,-88.6 3043.78,-88.6 3043.78,-118.6 3037.78,-124.6"/>
+<polyline fill="none" stroke="lightgreen" points="3037.78,-124.6 3037.78,-118.6"/>
+<polyline fill="none" stroke="lightgreen" points="3043.78,-118.6 3037.78,-118.6"/>
+<text text-anchor="middle" x="2976.3" y="-102.4" font-family="Times,serif" font-size="14.00">&amp;p_outDotFileName</text>
+</g><g id="edge35" class="edge" data-name="_20_datastep-&gt;&amp;p_outDotFileName" data-comment="_21_append">
+
+<path fill="none" stroke="black" d="M2872.89,-106.6C2880.87,-106.6 2889.02,-106.6 2897.06,-106.6"/>
+<polygon fill="black" stroke="black" points="2896.82,-110.1 2906.82,-106.6 2896.82,-103.1 2896.82,-110.1"/>
+</g><g id="edge37" class="edge" data-name="_21_append-&gt;&amp;p_outDsName" data-comment="_21_append">
+
+<path fill="none" stroke="black" d="M2532.46,-173.85C2545.01,-171.75 2558.35,-169.51 2571.12,-167.38"/>
+<polygon fill="black" stroke="black" points="2571.38,-170.88 2580.67,-165.78 2570.22,-163.98 2571.38,-170.88"/>
+</g></g>
+</svg>
