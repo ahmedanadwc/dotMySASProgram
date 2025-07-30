@@ -86,9 +86,16 @@
     l_dataSteps
     l_impExpStepsCnt
     l_impExpStepsExclude
+    l_stepsCount
+    l_concatLibObsCount
     ;
 
   %let l_sTime=%sysfunc(time());
+
+  /* Initialize the collection and open the output file */
+  %util_initScaproc(p_enableFlagName=g_enableScaProc
+  , p_outFilePath=%str(&g_logsRoot)
+  , p_outFileName=sca__util_parseScaproc.txt);
 
   /********** BEGIN -- Macro Parameter Validation **********/
   /* Check if the p_inScaprocFileName is specified or not */
@@ -153,277 +160,507 @@
     %let l_rankDir = LR;
 
   /********** END -- Macro Parameter Validation **********/
+  %let l_concatLibObsCount = 0;
 
-  /* Read the */
-  DATA work.scadata;
+  /* Read the SCA text file */
+  DATA work.scadata(DROP=rc);
     INFILE "&l_inScaprocFileName" LRECL=1000 LENGTH=linelength truncover END=eof;
-    LENGTH scaline $1000 linenum step 5;
+    LENGTH scaline $1000 file_linenum sca_linenum step 5 libref libname $8;
+    LABEL 
+		scaline = 'SCA line'
+		file_linenum = 'SCA file line number' 
+		sca_linenum = 'SCA none empty line number'
+		step = 'Step Counter'
+		;
+
+    if(_n_=1) then
+    do;
+     dcl hash libHash(ordered:'a');
+     libHash.definekey('libref');
+     libHash.definekey('libname');
+     libHash.definedone();
+    end;
+    
     INPUT @;
     INPUT scaline $varying1000. linelength;
-    linenum+1;
-    if (_n_=1 OR index(scaline,'STEP SOURCE FOLLOWS')) then step+1 ;
+    file_linenum+1;
+
+    if (length(strip(scaline)) gt 1) then
+    do;
+    	sca_linenum+1;
+    	if (_n_=1 OR index(scaline,'STEP SOURCE FOLLOWS')) then step+1 ;
+    	OUTPUT;
+    	
+    	/* JOBSPLIT: CONCATMEM #C00003 SASHELP */
+    	if (index(scaline,'CONCATMEM') gt 0) then
+    	do;
+			scaline = SUBSTR(scaline, index(scaline,'CONCATMEM') + 10);
+			libref = SCAN(scaline,1,' ');
+			libname = SCAN(scaline,2,' ');
+			lineEnd = SCAN(scaline,3,' ');
+			if (libref ne '' and libname ne '' and lineEnd eq '*/') then rc = libHash.add();
+    	end; /* End - (index(scaline,'CONCATMEM') gt 0) */
+    end; /* End - (length(strip(scaline)) gt 1) */
+
+  	/* Export/write the hash table */
+  	if (eof) then
+  	do;
+  		libHash.output(dataset: 'work.sca_libs');
+  	end;
   RUN;
 
-  /* Ignoring SASTemp outputs and Global Macro Variables */
-  DATA work.scadata1;
-    SET work.scadata(WHERE=((index(scaline,"JOBSPLIT") > 0) 
-    and (index(scaline,"SYMBOL")=0)
-    and (index(scaline,"CATALOG")=0)));
-  RUN;
-
-  /* Find Concatenated Libraries */
-  DATA work.concatmem;
-    set work.scadata1;
-    LENGTH libname concatmem $8;
-    where index(scaline, "/* JOBSPLIT: CONCATMEM ")=1;
-    linenum = max(1, linenum -2);
-    concatmem = put(scan(scaline, 4, " "), $20.);
-    libname = put(scan(scaline, 5, " "), $20.);
-  RUN;
-
-  /* Process the lines and extract data set columns/attributes */
-  DATA
-    work.scadata2(DROP=word1-word2 word4-word7)
-    work.ext_files(KEEP=word4)
-  %if (&l_includeAttrs_yn EQ Y) %then
-  %do;
-    work.attrs(KEEP=word4-word7 lib_dsname linenum step RENAME=(word4=in_out))
-  %end;
-    ;
-
-    LENGTH 
-      word1-word7 $100 
-      concatmem libname $8 
-      dsname $32
-      lib_dsname $41
-      in out $200
-      ;
-
-    if (_n_=1) then
-    do;
-      dcl hash h_ds();
-      h_ds.defineKey('word5');
-      h_ds.defineData('lib_dsname');
-      h_ds.defineDone(); 
-    end;
-
-    MERGE 
-      scadata1(in=a)
-      concatmem(in=b KEEP=linenum concatmem libname 
-        RENAME=(concatmem=_concatmem libname=_libname))
-    ;
-    BY linenum;
-    if a;
-
-    if (b) then 
-    do;
-      concatmem=_concatmem;
-      libname=_libname;
-    end;
-
-    if scaline=:'/* JOBSPLIT: ' ;
-    word1=scan(scaline,2,' ') ;
-    word2=scan(scaline,3,' ') ;
-    word3=scan(scaline,4,' ') ;
-    word4=scan(scaline,5,' ') ;
-    word5=scan(scaline,6,' ') ;
-    word6=scan(scaline,7,' ') ;
-    word7=scan(scaline,8,' ') ;
-
-    if (word2 in ('DATASET','ATTR')) then
-    do;
-      * exclude utility files;
-      if (word2 = 'DATASET') then
-      do;
-        if (index(word5,'UTILITY')=0) then
-        do;
-          dsname = scan(word5,2,'.');
-          if (libname ='') then libname = scan(word5,1,'.');
-
-          lib_dsname = catx('.',libname,dsname);
-
-          /* track unique lib_dsname values */
-          h_ds.ref();
-        end; /* (index(word5,'UTILITY')=0) */
-        else delete;
-      end; /* (word2 = 'DATASET') */
-      else
-      do; /* (word2 = 'ATTR') */
-        %if (&l_includeAttrs_yn EQ Y) %then
-        %do;
-        if (h_ds.find(key:word3) = 0) then OUTPUT work.attrs;
-        %end;
-      end; /* (word2 = 'ATTR') */
-    end;
-
-    if ( (concatmem ^= " ") 
-      AND (index(scaline, strip(concatmem))) ) then 
-    do;
-      concatmemfl="Y";
-      word5=tranwrd(word5, strip(concatmem), strip(libname));
-    end;
-
-    if (word2='DATASET' & word3='INPUT')  then in=strip(word4)||'~'||scan(word5,1,'.')||'.'||scan(word5,2,'.') ;
-    if (word2='DATASET' & word3='OUTPUT') then out=strip(word4)||'~'||scan(word5,1,'.')||'.'||scan(word5,2,'.') ;
-    if (word2='DATASET' & word3='UPDATE') then out=strip(word4)||'~'||scan(word5,1,'.')||'.'||scan(word5,2,'.') ;
-    if (word2='PROCNAME')                 then procname=word3 ;
-    if (word2='ELAPSED')                  then elapsed=input(word3,8.3) ;
-    if (word2='FILE' & word3='INPUT')     then do; in=strip(word4); word4=strip(word4); OUTPUT work.ext_files; end;
-    if (word2='FILE' & word3='OUTPUT')    then do; out=strip(word4); word4=strip(word4); OUTPUT work.ext_files; end;
-
-    OUTPUT work.scadata2;
-    DROP _concatmem _libname;
-  RUN;
-
-  /* Clean-up */
-  PROC DELETE DATA=work.concatmem work.scadata1 work.scadata; RUN;
-
-  PROC SQL NOPRINT ;
-    /* Find the Max Step count */
-    SELECT CATS('Z',ceil(log10(MAX(step))),'.')
+  /* Find the Max Step count */
+  PROC SQL NOPRINT;
+    SELECT CATS('Z',max(2,ceil(log10(MAX(step)))),'.')
     INTO :l_stepFmt
-    FROM  work.scadata2
-    ;
+    FROM  work.scadata;
   QUIT;
+  %put &=l_stepFmt;
 
   /**
-   * Find if there is Proc Export/Import steps 
+  * Find Concatenated Libraries 
   */
+  DATA _null_;
+    if (0) then SET work.sca_libs nobs=nobs;
+    call symputx("l_concatLibObsCount",nobs);
+  RUN;
+
+  %put &=l_concatLibObsCount;
+  %if (&l_concatLibObsCount GT 0) %then
+  %do;
+  DATA work.sca_libs;
+    SET work.sca_libs(RENAME=(libref=start libname=label)) ;
+    RETAIN fmtname '$cncatlibs' type 'C';
+  RUN;
+  PROC FORMAT cntlin=work.sca_libs; RUN;
+  %end;
+  PROC DELETE DATA=work.sca_libs; RUN;
+
+  /* Identify Input & Output data sets and their variables */
+  DATA work.scadata1 (KEEP=scaline sca_linenum step )
+  		work.step_inputs (KEEP=step sca_linenum dsname variable type filename entity_name) 
+  		work.step_outputs (KEEP=step sca_linenum dsname variable type filename entity_name)
+  %if (&l_includeSteps_yn = Y) %then 
+  %do; 
+      work.step_runtimes (KEEP=step step_start_dt ) 
+      work.step_names(KEEP=step step_name type fmtname)
+  %end;
+  		;
+  	
+  	/* Ignoring SASTemp outputs, Global Macro Variables and UTILITY files */
+    SET work.scadata(DROP=file_linenum WHERE=((index(scaline,"JOBSPLIT") > 0) 
+    and (indexw(scaline,"SYMBOL")=0)
+    and (indexw(scaline,"CATALOG")=0)
+    and (index(scaline,".UTILITY")=0)
+    and (index(scaline,'DATASET OUTPUT SEQ WORK.SORTTMP')=0)
+    ));
+    
+    LENGTH
+    	dsname $50 
+    	variable $32 
+    	type $15 
+    	step_start_dt 8 
+    	filename $200
+    	step_name $30
+    	entity_name $210;
+    	
+    FORMAT step_start_dt datetime22.2;
+    filename='';
+    
+    OUTPUT work.scadata1;
+
+  %if (&l_includeSteps_yn = Y) %then 
+  %do; 
+    IF (   (indexw(scaline,"TASKSTARTTIME") > 0) 
+    	OR (indexw(scaline,"JOBENDTIME") > 0) ) THEN
+    DO;
+   		step_start_dt = INPUT(SCAN(scaline,4,' '), datetime22.2);
+    	OUTPUT work.step_runtimes;
+    END;
+    ELSE IF(indexw(scaline,"PROCNAME") > 0) THEN
+    DO;
+    	step_name = SCAN(scaline,4,' ');
+    	type = 'N';
+    	fmtname = 'stepName';
+    	OUTPUT work.step_names;
+    END;
+    ELSE 
+  %end; /* End - (&l_includeSteps_yn = Y) */ 
+     IF ( (indexw(scaline,"ATTR") > 0) 
+              OR (indexw(scaline,"DATASET") > 0)
+              OR (indexw(scaline,"FILE") > 0) ) THEN 
+    DO;
+	    IF (indexw(scaline,"ATTR") > 0) THEN 
+	    DO;
+	    	scaline  = SUBSTR(scaline,14);
+	    	dsname   = SCAN(scaline,2,' ');
+        dsname   = CATX('.',SCAN(dsname,1,'.'),SCAN(dsname,2,'.'));
+    %if (&l_concatLibObsCount GT 0) %then
+    %do;
+	    	dsname   = CATX('.',PUT(SCAN(dsname,1,'.'),$cncatlibs.),SCAN(dsname,2,'.'));
+    %end;
+  			in_flag  = indexw(scaline,"INPUT");
+
+  			scaline  = SUBSTR(scaline,index(scaline,'VARIABLE:'));
+  			typ_idx  = index(scaline,'TYPE:');
+	     	variable = substr(scaline,(10),(typ_idx - 10));
+
+  			scaline  = SUBSTR(scaline,index(scaline,'TYPE:'));
+  			len_idx = index(scaline,'LENGTH:');
+  			type    = substr(scaline,(6),(len_idx - 6));
+
+  			scaline = SUBSTR(scaline,index(scaline,'LENGTH:'));
+  			lbl_idx = index(scaline,'LABEL:');
+  			len     = substr(scaline,(8),(lbl_idx - 8));
+
+  			type    = CATX(' ', IFC(type='CHARACTER','char','num') ,CATS('(',len,')') );
+	    END;
+	    ELSE IF (indexw(scaline,"FILE") > 0) THEN 
+	    DO;
+	    	scaline  = SUBSTR(scaline,14);
+	    	filename = SCAN(scaline,3,' ');
+        in_flag  = indexw(scaline,"INPUT");
+	    END;
+	    ELSE IF (indexw(scaline,"DATASET") > 0) THEN 
+	    DO;
+	    	scaline  = SUBSTR(scaline,14);
+	    	dsname   = SCAN(scaline,4,' ');
+        dsname   = CATX('.',SCAN(dsname,1,'.'),SCAN(dsname,2,'.'));
+    %if (&l_concatLibObsCount GT 0) %then
+    %do;
+	    	dsname   = CATX('.',PUT(SCAN(dsname,1,'.'),$cncatlibs.),SCAN(dsname,2,'.'));
+    %end;
+  			in_flag  = indexw(scaline,"INPUT");
+	    END;
+	    
+	    entity_name = ifc(COALESCEC(dsname,filename)='','',
+                    CATS(ifc(in_flag > 0,'i','o'),'_',PUT(step,&l_stepFmt.),'_',COALESCEC(dsname,filename)));
+	    
+	    /* Write the record to the correct destination based on the in_flag value */
+      IF (in_flag > 0) then OUTPUT work.step_inputs;
+      ELSE OUTPUT work.step_outputs;
+    END;
+  RUN;
+
+  PROC SORT DATA=work.step_inputs NODUPKEY;
+    BY step dsname variable type filename entity_name;
+  RUN;
+  PROC SORT DATA=work.step_outputs NODUPKEY;
+    BY step dsname variable type filename entity_name;
+  RUN;
+
+  %if (&l_includeSteps_yn = Y) %then 
+  %do; 
+  /* Create the stepname format */
+  PROC FORMAT CNTLIN=WORK.STEP_NAMES(RENAME=(step=start step_name=label)); RUN;
+  %end;
+
+  /** -------
+  * Compose logical steps in_out flow
+   ------- */
+  DATA work.in_out_info_v / VIEW=work.in_out_info_v;
+    SET work.step_inputs(WHERE=(filename NOT IN ('SEQ','MULTI')))
+        work.step_outputs(WHERE=(filename NOT IN ('SEQ','MULTI'))) INDSNAME=src_ds ;
+    source=src_ds;
+  RUN;
+  PROC SORT DATA=work.in_out_info_v OUT=work.in_out_info_flow;
+    BY step dsname;
+  RUN;
+  PROC DELETE DATA=WORK.IN_OUT_INFO_V (MT=VIEW); RUN;
+
+  /** -------
+  * Find unique Entity reference 
+   ------- */
+  PROC SQL;
+    /* Unique Input/Output Data Sets */
+    CREATE TABLE work.unqEntity_fmtds AS
+    SELECT DISTINCT 
+       entity_name as start  length=210
+      ,CAT(STRIP(dsname),'_(',PUT(col_cnt,z3.),')') as label length=210
+      ,'$unqEntity' as fmtname
+      ,'C' as type
+    FROM 
+    ( SELECT DISTINCT step,entity_name,dsname, count(*) as col_cnt
+      FROM work.step_inputs
+      WHERE variable ne ''
+      AND filename NOT IN ('SEQ','MULTI') 
+      GROUP BY entity_name
+     UNION
+      SELECT DISTINCT step,entity_name,dsname, count(*) as col_cnt
+      FROM work.step_outputs
+      WHERE variable ne ''
+      AND filename NOT IN ('SEQ','MULTI') 
+      GROUP BY entity_name
+    )
+    order by 1;
+
+    /* Unique Input/Output External Files */
+    CREATE TABLE work.unqEntity_fmtds_f AS
+    SELECT DISTINCT STRIP(entity_name) as start length=210
+      , STRIP(entity_name) as label length=210
+      , '$unqEntity' as fmtname
+      , 'C' as type
+    FROM work.in_out_info_flow
+    WHERE strip(filename) ne ''
+    AND strip(dsname) = '';
+  QUIT;
+
+  /* Combine all into a single table */
+  PROC APPEND BASE=WORK.unqentity_fmtds DATA=work.unqentity_fmtds_f; RUN;
+
+  /* Create a Format for lookup */
+  PROC FORMAT cntlin=work.unqEntity_fmtds; RUN;
+
+  /* Clean-up */
+  PROC DATASETS LIB=WORK NOLIST; 
+    DELETE unqEntity_fmtds: columns ds_col_cnts; 
+  RUN; QUIT;
+
+  /** ------
+  * Declare internal macro to process flow records
+   ------- */
+  %macro inner_getFlowDataSet(p_inDsName=
+    , p_outDsName=
+    , p_byVarName=
+    , p_byVarNames=
+    , p_stpsInputsDsName=
+    , p_stpsOutputsDsName=);
+
+    /* Merge the data into one record for each step */
+    DATA &p_outDsName (KEEP=step step_name 'in'n 'out'n in_dsname out_dsname in_filename out_filename in_entity_name out_entity_name);
+      LENGTH 
+        step 5
+        step_name $30
+        in_dsname out_dsname $200
+        in_filename out_filename 'in'n 'out'n $200
+        in_entity_name out_entity_name $210;
+
+      RETAIN step step_name in_dsname out_dsname in_filename out_filename in_entity_name out_entity_name;
+ 
+      DO UNTIL (last.&p_byVarName);
+        SET &p_inDsName(RENAME=(step=ds_step 
+          dsname=ds_dsname filename=ds_filename entity_name=ds_entity_name));
+        BY &p_byVarNames;
+
+        if (first.&p_byVarName) then
+          call missing (step, step_name, in_dsname, out_dsname, in_filename, out_filename, in_entity_name, out_entity_name);
+
+        if (step = .) then step = ds_step;
+        if (step_name = '') then step_name = '_'||CATX("_",PUT(ds_step,&l_stepFmt.),PUT(ds_step,stepname.));
+        if (in_dsname = '')  then if (strip(source)="&p_stpsInputsDsName") then in_dsname = ds_dsname;
+        if (in_filename = '')  then if (strip(source)="&p_stpsInputsDsName") then in_filename = ds_filename;
+        if (in_entity_name = '')  then if (strip(source)="&p_stpsInputsDsName") then in_entity_name = PUT(ds_entity_name,$unqEntity.);
+        if (out_dsname = '')  then if (strip(source)="&p_stpsOutputsDsName") then out_dsname = ds_dsname;
+        if (out_filename = '')  then if (strip(source)="&p_stpsOutputsDsName") then out_filename = ds_filename;
+        if (out_entity_name = '')  then if (strip(source)="&p_stpsOutputsDsName") then out_entity_name = PUT(ds_entity_name,$unqEntity.);
+      END;
+      'in'n  = coalescec(in_dsname,in_filename);  
+      'out'n = coalescec(out_dsname,out_filename);
+      if (CATS(in_dsname,out_dsname,in_filename,out_filename,in_entity_name,out_entity_name) ne '') then
+      OUTPUT;
+    RUN;
+  %mend inner_getFlowDataSet;
+
+  /** --------
+  * Merge the data into one record for each step 
+   ------- */
+  PROC SORT DATA=work.in_out_info_flow;
+    BY step entity_name;
+  RUN;
+  %inner_getFlowDataSet(p_inDsName=work.in_out_info_flow
+  , p_outDsName=work.steps_in_out_flow
+  , p_byVarName=ds_entity_name
+  , p_byVarNames=%str(ds_step ds_entity_name)
+  , p_stpsInputsDsName=WORK.STEP_INPUTS
+  , p_stpsOutputsDsName=WORK.STEP_OUTPUTS)
+
+  /** -------
+   * Find if there is Proc Export/Import steps 
+   -------- */
   %let l_impExpSteps=;
-  %let l_dataSteps=;
   %let l_impExpStepsCnt=;
-  %let l_impExpStepsExclude=;
 
   PROC SQL NOPRINT;
-  
     create table work.with_known_out as
-    select distinct out, step
-    from work.scadata2
-    group by out
+    select distinct coalesce(dsname,filename) as out, step
+    from work.step_outputs
+    group by 1
     having count(*) = 1
     order by step;
-    
+
     select distinct t1.step
     into :l_impExpSteps separated by ' '
-    from work.scadata2 t1
+    from work.scadata1 t1
     where t1.step not in
     (select t2.step from work.with_known_out t2)
-    and t1.word3 in ('IMPORT', 'EXPORT')
-    order by t1.step
-    ;
+    and PUT(t1.step,stepname.) in ('IMPORT', 'EXPORT')
+    order by t1.step;
   QUIT;
+  %let l_impExpStepsCnt = &sqlobs;
+  %put &=l_impExpSteps &=l_impExpStepsCnt;
+
   PROC DELETE DATA=work.with_known_out; RUN;
 
-  %let l_impExpStepsCnt = &sqlobs; 
-
-  /** 
+  /** ------
    * Perform special processing for Export/Import Step(s) 
-  */
+   ------- */
   %if (%superq(l_impExpSteps) NE ) %then
   %do;
+    %let l_dataSteps=;
+    %let l_impExpStepsExclude=;
+
     %do l_ei=1 %to &l_impExpStepsCnt;
       %let l_impExpStep = %scan(&l_impExpSteps,&l_ei,%str( ));
       %let l_dataStep   = %eval(&l_impExpStep + 1);
-      %let l_dataSteps = &l_dataSteps,&l_dataStep;
-      %let l_impExpStepsExclude = &l_impExpStepsExclude,&l_impExpStep,&l_dataStep ;
+      %let l_impExpStepsExclude = &l_impExpStepsExclude,&l_impExpStep ;
+      %if (%sysfunc(putn(&l_dataStep,stepname.)) EQ DATASTEP ) %then
+      %do;
+        %let l_dataSteps = &l_dataSteps,&l_dataStep;
+        %let l_impExpStepsExclude = &l_impExpStepsExclude,&l_dataStep ;
+      %end;
     %end;
     
     /* Remove leading comma */
     %let l_dataSteps = %substr(%superq(l_dataSteps),2);
     %let l_impExpStepsExclude = %substr(%superq(l_impExpStepsExclude),2);
 
-    /* %put &=l_dataSteps &=l_impExpStepsExclude; */
+    %put &=l_dataSteps &=l_impExpStepsExclude;
 
-    PROC SORT DATA=work.scadata2(WHERE=(step in (&l_impExpStepsExclude))) OUT=work.impExp_flow;
-      BY step linenum;
+    PROC SORT DATA=work.in_out_info_flow(WHERE=(step in (&l_impExpStepsExclude))) 
+      OUT=work.impExp_flow;
+      BY step sca_linenum;
     RUN;
 
     /* Merge the data into one record for each step */
-    DATA work.impExp_flow2 (KEEP=step procname in_access out_access 'in'n 'out'n elapsed);
-      LENGTH 
-        step 5
-        procname $104 
-        in_access out_access $200 
-        'in'n 'out'n $200 
-        elapsed 8;
-  
-      RETAIN step procname in_access out_access 'in'n 'out'n elapsed;
-      
-      DO UNTIL (last.step_ds);
-        SET work.impExp_flow(RENAME=(step=step_ds elapsed=elapsed_ds 'in'n=in_ds 'out'n=out_ds procname=procname_ds));
-        BY step_ds;
-        
-        if (first.step_ds) then
-          call missing (step , procname , in_access , out_access , 'in'n , 'out'n , elapsed);
-  
-        if (step = .)        then step=step_ds;
-        if (scan(procname,3,'_') = '') then procname = "_"||put(step_ds,&l_stepFmt.)||"_"||strip(procname_ds);
-        if (in_access = '')  then in_access = scan(in_ds,1,'~');
-        if (out_access = '') then out_access = scan(out_ds,1,'~');
-        if ('in'n = '')      then 'in'n = coalescec(scan(in_ds,2,'~'),in_access);
-        if ('out'n = '')     then 'out'n = coalescec(scan(out_ds,2,'~'), out_access);
-        if (elapsed = .)     then elapsed = elapsed_ds;
-      END;
-      if (elapsed) then OUTPUT;
-    RUN;
+    %inner_getFlowDataSet(p_inDsName=work.impExp_flow
+    , p_outDsName=work.impExp_flow2
+    , p_byVarName=ds_step
+    , p_byVarNames=%str(ds_step sca_linenum)
+    , p_stpsInputsDsName=WORK.STEP_INPUTS
+    , p_stpsOutputsDsName=WORK.STEP_OUTPUTS);
 
     PROC SQL;
-      CREATE TABLE work.impExp_flow AS
+      /* Create consolidated impExp flow data set */
+      CREATE TABLE work.impExp_flow3 AS
       SELECT a.step
-        , a.procname
-        , b.in_access
-        , b.out_access
-        , b.in
-        , b.out
-        , (a.elapsed + b.elapsed) as elapsed
+        , a.step_name
+        , CASE
+            WHEN INDEX(a.step_name,'IMPORT') THEN coalesce(a.in_filename,b.in_filename)
+            ELSE coalesce(b.in_dsname,a.in_dsname)
+          END as 'in'n
+        , CASE
+            WHEN INDEX(a.step_name,'EXPORT') THEN coalesce(b.out_filename,a.out_filename)
+            ELSE coalesce(b.out_dsname,a.out_dsname)
+          END as 'out'n
+        , coalesce(b.in_entity_name,a.in_entity_name) as in_entity_name
+        , coalesce(b.out_entity_name,a.out_entity_name) as out_entity_name
       FROM work.impExp_flow2(WHERE=(step IN (&l_impExpSteps))) AS a
       FULL join work.impExp_flow2(WHERE=(step IN (&l_dataSteps))) AS b
       on a.step = (b.step -1);
+
+      /* Exclude/Remove the import/Export steps from other data sets */
+      DELETE FROM work.step_runtimes WHERE step IN (&l_dataSteps);
+      DELETE FROM work.steps_in_out_flow WHERE step in (&l_impExpStepsExclude);
     QUIT;
-    
-    PROC DELETE DATA=work.impExp_flow2; RUN;
-  %end;
-  
-  PROC SQL NOPRINT;
-    /* Merge the data into one record for each step */
-    CREATE TABLE work.flow AS
-    SELECT DISTINCT COALESCE(a.step,b.step,c.step) AS step
-      ,"_"||put(coalesce(a.step,b.step,c.step),&l_stepFmt.)||"_"||strip(a.procname) as procname
-      ,COALESCE(scan(b.in,1,'~'),scan(c.in,1,'~')) as in_access
-      ,coalesce(scan(b.out,1,'~'),scan(c.out,1,'~')) as out_access
-      ,coalesce(scan(b.in,2,'~'),scan(c.in,2,'~')) as in
-      ,coalesce(scan(b.out,2,'~'),scan(c.out,2,'~')) as out
-      ,d.elapsed
-    FROM work.scadata2(where=(procname ^= '' %if(&l_impExpStepsCnt > 0) %then %do; AND NOT (step in (&l_impExpStepsExclude)) %end;)) as a
-    FULL JOIN
-      work.scadata2(where=(in ^= '' %if(&l_impExpStepsCnt > 0) %then %do; AND NOT (step in (&l_impExpStepsExclude)) %end;)) as b ON a.step=b.step
-    FULL JOIN  
-      work.scadata2(where=(out ^= '' %if(&l_impExpStepsCnt > 0) %then %do; AND NOT (step in (&l_impExpStepsExclude)) %end;)) as c ON a.step=c.step 
-    LEFT JOIN
-      work.scadata2(where=(elapsed>0 %if(&l_impExpStepsCnt > 0) %then %do; AND NOT (step in (&l_impExpStepsExclude)) %end;)) as d ON a.step=d.step 
-    ORDER BY CALCULATED step
-    ;
-  QUIT;
 
-  %if ((&l_impExpStepsCnt > 0 ) AND (%sysfunc(exist(work.impExp_flow)))) %then 
-  %do;
-    PROC APPEND BASE=work.flow DAta=work.impExp_flow FORCE; RUN;
-    PROC DELETE DATA=work.impExp_flow; RUN;
-  %end;
+    /* Add reformed Import/Export steps to the flow */
+    PROC APPEND BASE=work.steps_in_out_flow DATA=work.impExp_flow3 FORCE NOWARN; RUN;
 
-  /* Ensure unique flow steps */
-  PROC SORT DATA=WORK.flow /*(WHERE=(STRIP(in) NE '' AND STRIP(out) NE ''))*/ NODUPKEY;
-    BY step procname in_access in out;
+    /* Clean-up */
+    PROC DATASETS LIB=WORK NOLIST;
+      DELETE impExp_flow:; 
+    RUN; QUIT;
+  %end; /* End - (%superq(l_impExpSteps) NE ) */
+ 
+  /* Clean-up */
+  PROC DATASETS LIB=WORK NOLIST;
+   DELETE scadata: step_inputs step_outputs; 
+  QUIT; RUN;
+
+  /** ---------
+  * Reduce Multi-line step into a single line for each step 
+   --------- */
+  PROC SORT DATA=work.steps_in_out_flow(KEEP=step step_name 'in'n 'out'n in_entity_name out_entity_name);
+    BY step step_name 'in'n 'out'n in_entity_name out_entity_name;
   RUN;
 
-  /* Clean-up */
-  PROC DELETE DATA=work.scadata2; RUN;
+  DATA work.single_line_dag (KEEP=step step_name ins outs in_entities out_entities);
+    if (0) then SET work.steps_in_out_flow;
+    LENGTH 
+      ins outs $4000 
+      in_entities out_entities $8000;
+
+    DO UNTIL (last.step);
+      SET work.steps_in_out_flow;
+      BY step;
+      ins          = CATX(' ',ins,in);
+      outs         = CATX(' ',outs,out);
+      in_entities  = CATX(' ',in_entities,in_entity_name);
+      out_entities = CATX(' ',out_entities,out_entity_name);
+    END;
+    OUTPUT;
+  RUN;
+
+  /* Find unique Entities */
+  PROC SQL;
+    CREATE TABLE unique_in_out_entities AS
+    SELECT DISTINCT entity_name
+    FROM
+    (SELECT in_entity_name as entity_name
+     FROM work.steps_in_out_flow
+     UNION
+     SELECT out_entity_name as entity_name
+     FROM work.steps_in_out_flow);
+  QUIT;
+
+  PROC DELETE DATA=work.STEPS_IN_OUT_FLOW; RUN;
+
+  %if (&l_includeSteps_yn = Y) %then
+  %do;
+    /* Calculate steps run-time duration */
+    DATA work.step_runtimes2;
+     if (eof=0) then set work.step_runtimes(firstobs=2 keep=step_start_dt rename=(step_start_dt=step_end_dt)) end=eof;
+     else step_end_dt=.;
+     
+     SET work.step_runtimes;
+    LENGTH runTime_duration 8;
+    FORMAT runTime_duration time12.2;
+
+    if (step_end_dt > 0) then
+    	runTime_duration = step_end_dt - step_start_dt;
+    if (runTime_duration  ne .);
+    RUN;
+
+    /* Join the names with their duration run-times */
+    PROC SQL;
+     CREATE TABLE work.step_names2 AS
+     SELECT 
+    	a.step
+     	, a.fmtname
+     	, CAT('_',PUT(a.step,&l_stepFmt.),'_',STRIP(a.step_name),' (',STRIP(PUT(b.runtime_duration,time12.2)),')') as step_name LENGTH=30
+     	, a.type
+     FROM work.step_names a
+     INNER JOIN work.step_runtimes2 b 
+     ON a.step = b.step
+     ORDER BY step;
+    QUIT;
+    %let l_stepsCount = &sqlobs;
+
+    /* Create stepName format */
+    PROC FORMAT CNTLIN=work.step_names2(RENAME=(step=start step_name=label));
+    RUN;
+
+    /* Clean-up */
+    PROC DATASETS lib=work nolist;
+     DELETE step_names: step_runtimes:; 
+    QUIT; RUN;
+  %end; /* End - (&l_includeSteps_yn = Y) */
 
   * ---------------;
   * Create .DOT directives to make a diagram ;
   * ---------------;
   * First: Produce header lines;
-  DATA &l_outDsName ;
+  DATA work._flow_start_ ;
     LENGTH line $6000;
 
     line="// Generated by SAS for &l_inScaprocFileName" ;
@@ -432,7 +669,6 @@
     OUTPUT ;
     line="rankdir=&l_rankDir";
     OUTPUT;
-    /*line="graph [label=""\n\n&l_inScaprocFileName\n%sysfunc(datetime(),datetime.)""]" ;*/
     line="graph [label=""\n&l_inScaprocFileName""]" ;
     OUTPUT ;
   %if (&l_includeAttrs_yn EQ Y) %then
@@ -443,312 +679,116 @@
   %do;
     line='node [shape=cylinder color=lightblue style=filled]' ;
   %end;
+    OUTPUT ;    
+  RUN;
+
+  PROC SQL;
+    CREATE TABLE work._flow_attrs_ AS
+    SELECT DISTINCT
+       flow.step 
+      ,flow.entity_name
+      ,IFC((STRIP(flow.dsname) eq '' AND STRIP(flow.filename) ne ''),'F','D') AS entity_type 
+      ,CASE
+  /* Write out Entities definitions */
+  %if (&l_includeAttrs_yn EQ Y) %then
+  %do;
+        /* Variable Attribute */
+        WHEN (STRIP(flow.dsname) ne '' AND STRIP(flow.filename) eq '' AND STRIP(variable) ne '') THEN
+          CATS('<TR><TD BORDER="0" ALIGN="LEFT"><FONT POINT-SIZE="10">'
+        	  ,flow.variable
+        	  ,'</FONT></TD><TD BORDER="0" ALIGN="RIGHT"><FONT POINT-SIZE="10">'
+        	  ,flow.type
+        	  ,'</FONT></TD></TR>')
+  %end; /* End - (&l_includeAttrs_yn EQ Y) */
+        /* External File */
+        WHEN (STRIP(flow.dsname) eq '' AND STRIP(flow.filename) ne '') THEN
+          '"'||STRIP(PUT(flow.entity_name,$unqEntity.))||'" [ shape="note" label="'|| STRIP(flow.filename)||'" color=lightgreen style=filled ]'
+        /* Data set */
+        /*WHEN (STRIP(flow.dsname) ne '' AND STRIP(flow.filename) eq '') THEN*/
+        ELSE
+          '"'||STRIP(PUT(flow.entity_name,$unqEntity.))||'" [label=<<TABLE BORDER="0" CELLSPACING="0"><TR><TD BORDER="0" COLSPAN="2" CELLPADDING="0"><FONT POINT-SIZE="12">'
+             || STRIP(PUT(flow.entity_name,$unqEntity.))||'</FONT></TD></TR>'
+      END as line LENGTH=6000 FORMAT=$6000.
+
+    FROM work.in_out_info_flow as flow
+    INNER JOIN work.unique_in_out_entities as ent
+    ON PUT(flow.entity_name,$unqEntity.) = ent.entity_name 
+    AND ent.entity_name IS NOT NULL
+    ORDER BY 1,2;
+  QUIT;
+
+  /* Add Table closing tag */
+  DATA work._flow_attrs_ ;
+    SET work._flow_attrs_;
+    BY step entity_name;
+    OUTPUT;
+    if (last.entity_name) then
+    do; 
+      if (entity_type='D') then
+      do;
+        line='</TABLE>>];';
+        OUTPUT;
+      end;
+    end;
+  RUN;
+ 
+  /* Write out the Dag */
+	DATA work._flow_dag_(KEEP=line) ;
+		LENGTH line $6000 step_name $30;
+    SET work.single_line_dag;
+    BY step;
+
+  %if (&l_includeSteps_yn = Y) %then 
+  %do; 
+    /* Step Definition */
+		line = CATS('"',step_name,'"')||' [shape="oval" label="'||STRIP(SCAN(PUT(step,stepname.),2,'_'))||'" color=yellow style=filled ]';
+    line = strip(line);
+		OUTPUT;
+    /* Inputs */
+    line = CATX(' -> ',CATS('{"', TRANWRD(STRIP(in_entities),' ','" "') ,'"}'),CATS('{"',step_name,'"}'));
+    line = strip(line);
+    OUTPUT;
+    /* Outputs */
+    line = CATX(' -> ',CATS('{"',step_name,'"}'),CATS('{"', TRANWRD(STRIP(out_entities),' ','" "') ,'"}'));
+    line = strip(line);
+    OUTPUT;
+  %end;
+  %else
+  %do;
+    /* Inputs */
+    line = CAT(CATS('{"', TRANWRD(STRIP(in_entities),' ','" "') ,'"}'),' -> ');
+    line = strip(line);
+    /* Outputs */
+    line = CATX(' ',line,CATS('{"', TRANWRD(STRIP(out_entities),' ','" "') ,'"}'));
+    OUTPUT;
+  %end;
+  RUN;
+  
+  * Last: Produce closing lines;
+  DATA work._flow_end_ ;
+    LENGTH line $6000;
+    line= '}' ;
     OUTPUT ;
   RUN;
 
-  %if (&l_includeAttrs_yn EQ Y) %then
-  %do;
-
-    /* ------------------------------ */
-    /* Find unique entity definitions */
-    /* ------------------------------ */
-    
-    /* Sort for proper processing */
-    PROC SORT DATA=WORK.attrs;
-      BY step in_out lib_dsname;
-    RUN;
-    
-    /* Use Hash of Hash to ensure only unique entity attributes are stored */
-    DATA attrs_unique(drop=find_rc eq_rc eq in_out);
-
-      length eq 3;
-
-      if (0) then set work.attrs;
-
-      declare hash HoH(ordered:'a');
-      HoH.definekey ('lib_dsname');
-      HoH.definedata('h','iter','lib_dsname');
-      HoH.definedone();
-
-      declare hash h;
-      declare hiter iter;
-      declare hiter HoHiter("HoH");
-      
-      declare hash h2(ordered:'a', multidata:'yes');
-      h2.definekey('lib_dsname','word5');
-      h2.definedata('word5','word6','word7','lib_dsname','linenum','step');
-      h2.definedone();
-      declare hiter hi2('h2');
-      
-      /* Create a Hash object for every table (lib_dsname) */
-      do until (eof);
-        do until (last.lib_dsname);
-        
-          SET work.attrs End=eof;
-          BY step in_out lib_dsname;
-          
-          /* Strip trailing spaces */
-          lib_dsname=STRIP(lib_dsname);
-          word5=STRIP(word5);
-          word6=STRIP(word6);
-          word7=STRIP(WORD7);
-  
-          /* Create a hash object for every table/entity and Populate it */
-          if (first.lib_dsname) then
-          do;
-            h = _new_ hash(ordered:'a', multidata:'yes');
-            h.definekey('lib_dsname','word5');
-            h.definedata('word5','word6','word7','lib_dsname','linenum','step');
-            h.definedone();
-            iter = _new_ hiter ('h');
-          end;
-          h.add();
-          
-          /* 
-           * Create a backup copy in case we needed to compare 
-           * against a pre-processed entity definition 
-          */
-          h2.add(); 
-          
-        end; /* End - do until (last.lib_dsname) */
-
-        /* Try to add the definition */
-
-        find_rc = HoH.find();
-        /* put find_rc=; */
-        if  (find_rc ne 0) then 
-        do;
-          HoH.add();
-        end;
-        else
-        do;
-          /* Check if the entities attributes are matching */
-          eq_rc = h.equals(hash: 'h2', result: eq);
-          /* put eq_rc= eq=; */
-        end;
-        h2.clear();
-      end; /* End - do until (eof) */
-      
-      /* By Now - we should have unique list of data sets */
-      do while (HoHiter.next() = 0);
-        do while (iter.next() = 0);
-          OUTPUT attrs_unique;
-        end;
-      end; /* End - do while ... */
-    RUN;
-
-    /* Ensure the entities are ordered based on their appearance in the steps */
-    PROC SORT DATA=attrs_unique NODUPKEY; *<- Added NODUPKEY;
-      BY step linenum lib_dsname;
-    RUN;
-
-    /* Next: Generate Entity/Table definitions lines */
-    DATA work.attrs_lines(KEEP=line);
-      LENGTH line $6000; 
-
-      DO UNTIL (last.lib_dsname);
-        SET attrs_unique;
-        BY step linenum lib_dsname;
-
-        /* Output Table name */
-        if (first.lib_dsname) then 
-        do;
-          line =QUOTE(STRIP(lib_dsname))|| ' [label=<<TABLE BORDER="0" CELLSPACING="0"><TR><TD BORDER="0" COLSPAN="2" CELLPADDING="0">' 
-                ||'<FONT POINT-SIZE="12">'||STRIP(lib_dsname)|| '</FONT></TD></TR>' ;
-          OUTPUT;
-        end;
-        line ='<TR><TD BORDER="0" ALIGN="LEFT"><FONT POINT-SIZE="10">'||STRIP(SCAN(word5,2,':'))
-              ||'</FONT></TD><TD BORDER="0" ALIGN="RIGHT"><FONT POINT-SIZE="10">'||IFC(scan(word6,2,':')='CHARACTER','char','num')
-              ||' ('||STRIP(scan(word7,2,':'))||')</FONT></TD></TR>' ;
-        OUTPUT;
-      END;
-      /* Close out the node definition */
-      line = '</TABLE>>];';
-      OUTPUT;
-    RUN;
-    PROC APPEND BASE=&l_outDsName DATA=work.attrs_lines FORCE; RUN;
-
-    /* Clean-up */
-    PROC DELETE DATA=work.attrs work.attrs_unique work.attrs_lines; RUN;
-  %end;
-
-  /* Next: Generate flow lines */
-  DATA work.flow_lines (keep=line) ;
-    LENGTH line $6000 style $12;
-    
-    if (0) then set work.ext_files;
-    
-    declare hash h(dataset:'work.ext_files');
-    h.defineKey('word4');
-    h.defineData('word4');
-    h.defineDone();
-    call missing (word4);
-
-    /* Write out the steps/process definition */
-
-    DO UNTIL (end);
-      SET work.flow end=end ;
-      BY step;
-  
-      in  = quote(coalescec(strip(in),strip(in_access))) ;
-      out = quote(coalescec(strip(out),strip(out_access))) ;
-      procname=lowcase(strip(procname)) ;
-      style='style=solid ' ;
-
-      %if (&l_includeSteps_yn = Y) %then
-      %do;
-        LENGTH in_prefix in_suffix out_prefix out_suffix prev_in prev_out $3000;
-        RETAIN in_prefix in_suffix out_prefix out_suffix prev_in prev_out ;
-        
-        /* Step Definition */
-        if (first.step) then
-        do;
-          line='"'||lowcase(strip(procname))||'"'||
-          '[ shape="oval" label="'||lowcase(strip(procname))||' ('||strip(put(elapsed,8.3))||')" color=yellow style=filled ]';
-          OUTPUT;
-
-          /* Cater for File nodes */
-          if (h.check(key:dequote(strip(out))) = 0) then
-          do;
-            line=strip(out)||
-            '[ shape="note" label='||strip(out)||' color=lightgreen style=filled ]';
-            OUTPUT;
-          end;
-          
-          if (h.check(key:dequote(strip(in))) = 0) then
-          do;
-            line=strip(in)||
-            '[ shape="note" label='||strip(in)||' color=lightgreen style=filled ]';
-            OUTPUT;
-          end;
-          
-          CALL MISSING(in_prefix,in_suffix,out_prefix,out_suffix,prev_in,prev_out,line);
-        end;
-        
-        /* Single input - Single Output */
-        if ((first.step = 1) AND (last.step = 1)) then
-        do;
-          if (compress(in,'"')>'') then line='{'||strip(in)||'} -> ';
-          line=strip(line)||'{"'||lowcase(strip(procname))||'"}';
-          if (compress(out,'"')>'') then line=strip(line)||' -> {'||strip(out)||'}';
-
-          OUTPUT;
-        end;
-        else if ((first.step = 1) AND (last.step = 0)) then
-        do;
-          if (compress(in,'"')>'') then
-          do;
-            in_prefix =CATX(' ','{',strip(in));  
-            in_suffix = ' -> {"'||lowcase(strip(procname))||'"}';
-            prev_in = strip(in);
-          end;
-          if (compress(out,'"')>'') then
-          do;
-            out_prefix = '{"'||lowcase(strip(procname))||'"}';  
-            out_suffix = ' -> {'||strip(out);
-            prev_out = strip(out);
-          end;
-        end;
-        else if ((first.step = 0) AND (last.step = 1)) then
-        do;
-
-          if ((compress(in,'"')>'') AND (prev_in ne strip(in))) then
-            in_prefix =strip(in_prefix)||' '||strip(in)||'}';
-          else if (strip(in_prefix) ne '') then
-            in_prefix =CATS(in_prefix,'}');
-          
-          line=CATS(in_prefix,in_suffix);
-          OUTPUT;
-
-          if ((compress(out,'"')>'') AND (prev_out ne strip(out))) then
-            out_suffix = strip(out_suffix)||' '||strip(out)||'}';
-          else if (strip(out_suffix) ne '') then
-            out_suffix = CATS(out_suffix,'}');
-            
-          line=cats(out_prefix,out_suffix);
-          OUTPUT;
-        end;
-      %end; /* End - (&l_includeSteps_yn = Y) */
-      %else
-      %do;
-        /* File Definition */
-        if (first.step) then
-        do;
-          /* Cater for File nodes */
-          if (h.check(key:dequote(strip(out))) = 0) then
-          do;
-            line=strip(out)||
-            '[ shape="note" label='||strip(out)||' color=lightgreen style=filled ]';
-            OUTPUT;
-          end;
-          
-          if (h.check(key:dequote(strip(in))) = 0) then
-          do;
-            line=strip(in)||
-            '[ shape="note" label='||strip(in)||' color=lightgreen style=filled ]';
-            OUTPUT;
-          end;
-        end;
-        /* Single input - Single Output */
-        if ((first.step = 1) AND (last.step = 1)) then
-        do;
-          if (compress(in,'"')>'') then line='{'||strip(in)||'}';
-          if (compress(out,'"')>'') then line=strip(line)||' -> {'||strip(out)||'}';
-          OUTPUT;
-        end;
-        else if ((first.step = 1) AND (last.step = 0)) then
-        do;
-          if (compress(in,'"')>'') then
-          do;
-            in_prefix =CATX(' ','{',strip(in));
-            prev_in = strip(in);
-          end;
-          if (compress(out,'"')>'') then
-          do;
-            out_suffix = ' -> {'||strip(out);
-            prev_out = strip(out);
-          end;
-        end;
-        else if ((first.step = 0) AND (last.step = 1)) then
-        do;
-          if ((compress(in,'"')>'') AND (prev_in ne strip(in))) then
-            in_prefix =CATX(' ',in_prefix,strip(in),'}');
-          else
-            in_prefix =CATS(in_prefix,'}');
-
-          if ((compress(out,'"')>'') AND (prev_out ne strip(out))) then
-            out_suffix = CATX(' ',out_suffix,strip(out),'}');
-          else
-            out_suffix = CATS(out_suffix,'}');
-            
-          line=CATS(in_prefix,out_suffix);
-          OUTPUT;
-        end;
-      %end; /* End - (&l_includeSteps_yn = N) */
-  
-      if (end) then 
-      do ;
-        line='}' ;
-        OUTPUT ;
-      end ;
-    end;
-    STOP;
-  RUN ;
-  
   DATA _NULL_;
     FILE "&l_outDotFilePath/&l_outDotFileName" lRECL=6000;
-    SET &l_outDsName work.flow_lines;
+    SET work._flow_start_ 
+      work._flow_attrs_
+      work._flow_dag_
+    	work._flow_end_;
+
     line=STRIP(line);
     PUT line;
   RUN;
 
-  %if (%superq(p_outDsName) NE ) %then
-  %do;
-    PROC APPEND BASE=&l_outDsName DATA=work.flow_lines FORCE; RUN;
-  %end;
-
   /* Clean-up */
-  PROC DELETE DATA=work.flow work.flow_lines work.ext_files; RUN;
+  PROC DATASETS LIB=WORK NOLIST;
+    DELETE _flow_: in_out_info_flow single_line_dag unique_in_out_entities;
+  RUN; QUIT;
+
+  /* Terminate the collection and close the output file */
+  %util_termScaproc(p_enableFlagName=g_enableScaProc)
 
   %goto finished;
 
