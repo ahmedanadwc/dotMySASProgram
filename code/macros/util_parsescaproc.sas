@@ -342,11 +342,18 @@
     END;
   RUN;
 
+
   PROC SORT DATA=work.step_inputs NODUPKEY;
     BY step dsname variable type filename entity_name;
   RUN;
   PROC SORT DATA=work.step_outputs NODUPKEY;
     BY step dsname variable type filename entity_name;
+  RUN;
+  PROC SORT DATA=work.step_inputs;
+    BY step dsname sca_linenum ;
+  RUN;
+  PROC SORT DATA=work.step_outputs;
+    BY step dsname sca_linenum ;
   RUN;
 
   %if (&l_includeSteps_yn = Y) %then 
@@ -360,11 +367,11 @@
    ------- */
   DATA work.in_out_info_v / VIEW=work.in_out_info_v;
     SET work.step_inputs(WHERE=(filename NOT IN ('SEQ','MULTI')))
-        work.step_outputs(WHERE=(filename NOT IN ('SEQ','MULTI'))) INDSNAME=src_ds ;
-    source=src_ds;
+        work.step_outputs(WHERE=(filename NOT IN ('SEQ','MULTI')));
+    source=substr(entity_name,1,1);
   RUN;
   PROC SORT DATA=work.in_out_info_v OUT=work.in_out_info_flow;
-    BY step dsname;
+    BY step dsname sca_linenum entity_name;
   RUN;
   PROC DELETE DATA=WORK.IN_OUT_INFO_V (MT=VIEW); RUN;
 
@@ -392,12 +399,12 @@
       AND filename NOT IN ('SEQ','MULTI') 
       GROUP BY entity_name
     )
-    order by 1;
+    ORDER BY 1;
 
     /* Unique Input/Output External Files */
     CREATE TABLE work.unqEntity_fmtds_f AS
     SELECT DISTINCT STRIP(entity_name) as start length=210
-      , STRIP(entity_name) as label length=210
+      , STRIP(filename) as label length=210
       , '$unqEntity' as fmtname
       , 'C' as type
     FROM work.in_out_info_flow
@@ -411,9 +418,17 @@
   /* Create a Format for lookup */
   PROC FORMAT cntlin=work.unqEntity_fmtds; RUN;
 
+  /* Find unique Entities */
+  PROC SQL;
+    CREATE TABLE unique_in_out_entities AS
+    SELECT DISTINCT label as entity_name
+    FROM  
+    WORK.unqentity_fmtds;
+  QUIT;
+
   /* Clean-up */
   PROC DATASETS LIB=WORK NOLIST; 
-    DELETE unqEntity_fmtds: columns ds_col_cnts; 
+    DELETE unqEntity_fmtds_f columns ds_col_cnts; 
   RUN; QUIT;
 
   /** ------
@@ -422,20 +437,22 @@
   %macro inner_getFlowDataSet(p_inDsName=
     , p_outDsName=
     , p_byVarName=
-    , p_byVarNames=
-    , p_stpsInputsDsName=
-    , p_stpsOutputsDsName=);
+    , p_byVarNames=);
 
     /* Merge the data into one record for each step */
-    DATA &p_outDsName (KEEP=step step_name 'in'n 'out'n in_dsname out_dsname in_filename out_filename in_entity_name out_entity_name);
+    DATA &p_outDsName (KEEP=step step_name 'in'n 'out'n in_dsname out_dsname in_filename out_filename 
+                            in_entity_name out_entity_name unq_in_entity_name unq_out_entity_name);
       LENGTH 
         step 5
         step_name $30
         in_dsname out_dsname $200
         in_filename out_filename 'in'n 'out'n $200
-        in_entity_name out_entity_name $210;
+        in_entity_name out_entity_name unq_in_entity_name unq_out_entity_name $210;
 
-      RETAIN step step_name in_dsname out_dsname in_filename out_filename in_entity_name out_entity_name;
+      RETAIN step step_name in_dsname out_dsname 
+        in_filename out_filename 
+        in_entity_name out_entity_name
+        unq_in_entity_name unq_out_entity_name;
  
       DO UNTIL (last.&p_byVarName);
         SET &p_inDsName(RENAME=(step=ds_step 
@@ -443,16 +460,20 @@
         BY &p_byVarNames;
 
         if (first.&p_byVarName) then
-          call missing (step, step_name, in_dsname, out_dsname, in_filename, out_filename, in_entity_name, out_entity_name);
+          CALL MISSING (step, step_name, in_dsname, out_dsname
+            , in_filename, out_filename, in_entity_name, out_entity_name
+            , unq_in_entity_name, unq_out_entity_name);
 
         if (step = .) then step = ds_step;
         if (step_name = '') then step_name = '_'||CATX("_",PUT(ds_step,&l_stepFmt.),PUT(ds_step,stepname.));
-        if (in_dsname = '')  then if (strip(source)="&p_stpsInputsDsName") then in_dsname = ds_dsname;
-        if (in_filename = '')  then if (strip(source)="&p_stpsInputsDsName") then in_filename = ds_filename;
-        if (in_entity_name = '')  then if (strip(source)="&p_stpsInputsDsName") then in_entity_name = PUT(ds_entity_name,$unqEntity.);
-        if (out_dsname = '')  then if (strip(source)="&p_stpsOutputsDsName") then out_dsname = ds_dsname;
-        if (out_filename = '')  then if (strip(source)="&p_stpsOutputsDsName") then out_filename = ds_filename;
-        if (out_entity_name = '')  then if (strip(source)="&p_stpsOutputsDsName") then out_entity_name = PUT(ds_entity_name,$unqEntity.);
+        if (in_dsname = '')  then if (strip(source)='i') then in_dsname = ds_dsname;
+        if (in_filename = '')  then if (strip(source)='i') then in_filename = ds_filename;
+        if (in_entity_name = '')  then if (strip(source)='i') then in_entity_name = ds_entity_name;
+        if (unq_in_entity_name = '')  then if (strip(source)='i') then unq_in_entity_name = PUT(ds_entity_name,$unqEntity.);
+        if (out_dsname = '')  then if (strip(source)='o') then out_dsname = ds_dsname;
+        if (out_filename = '')  then if (strip(source)='o') then out_filename = ds_filename;
+        if (out_entity_name = '')  then if (strip(source)='o') then out_entity_name = ds_entity_name;
+        if (unq_out_entity_name = '')  then if (strip(source)='o') then unq_out_entity_name = PUT(ds_entity_name,$unqEntity.);
       END;
       'in'n  = coalescec(in_dsname,in_filename);  
       'out'n = coalescec(out_dsname,out_filename);
@@ -470,9 +491,7 @@
   %inner_getFlowDataSet(p_inDsName=work.in_out_info_flow
   , p_outDsName=work.steps_in_out_flow
   , p_byVarName=ds_entity_name
-  , p_byVarNames=%str(ds_step ds_entity_name)
-  , p_stpsInputsDsName=WORK.STEP_INPUTS
-  , p_stpsOutputsDsName=WORK.STEP_OUTPUTS)
+  , p_byVarNames=%str(ds_step ds_entity_name))
 
   /** -------
    * Find if there is Proc Export/Import steps 
@@ -535,9 +554,7 @@
     %inner_getFlowDataSet(p_inDsName=work.impExp_flow
     , p_outDsName=work.impExp_flow2
     , p_byVarName=ds_step
-    , p_byVarNames=%str(ds_step sca_linenum)
-    , p_stpsInputsDsName=WORK.STEP_INPUTS
-    , p_stpsOutputsDsName=WORK.STEP_OUTPUTS);
+    , p_byVarNames=%str(ds_step sca_linenum));
 
     PROC SQL;
       /* Create consolidated impExp flow data set */
@@ -554,6 +571,9 @@
           END as 'out'n
         , coalesce(b.in_entity_name,a.in_entity_name) as in_entity_name
         , coalesce(b.out_entity_name,a.out_entity_name) as out_entity_name
+        , PUT(coalesce(b.in_entity_name,a.in_entity_name),$unqEntity.) as unq_in_entity_name
+        , PUT(coalesce(b.out_entity_name,a.out_entity_name),$unqEntity.) as unq_out_entity_name
+
       FROM work.impExp_flow2(WHERE=(step IN (&l_impExpSteps))) AS a
       FULL join work.impExp_flow2(WHERE=(step IN (&l_dataSteps))) AS b
       on a.step = (b.step -1);
@@ -580,38 +600,28 @@
   /** ---------
   * Reduce Multi-line step into a single line for each step 
    --------- */
-  PROC SORT DATA=work.steps_in_out_flow(KEEP=step step_name 'in'n 'out'n in_entity_name out_entity_name);
-    BY step step_name 'in'n 'out'n in_entity_name out_entity_name;
+  PROC SORT DATA=work.steps_in_out_flow(KEEP=step step_name 'in'n 'out'n in_entity_name out_entity_name unq_in_entity_name unq_out_entity_name);
+    BY step step_name 'in'n 'out'n in_entity_name out_entity_name unq_in_entity_name unq_out_entity_name;
   RUN;
 
-  DATA work.single_line_dag (KEEP=step step_name ins outs in_entities out_entities);
+  DATA work.single_line_dag (KEEP=step step_name ins outs in_entities out_entities unq_in_entities unq_out_entities);
     if (0) then SET work.steps_in_out_flow;
     LENGTH 
       ins outs $4000 
-      in_entities out_entities $8000;
+      in_entities out_entities unq_in_entities unq_out_entities $8000;
 
     DO UNTIL (last.step);
       SET work.steps_in_out_flow;
       BY step;
-      ins          = CATX(' ',ins,in);
-      outs         = CATX(' ',outs,out);
-      in_entities  = CATX(' ',in_entities,in_entity_name);
-      out_entities = CATX(' ',out_entities,out_entity_name);
+      ins          = CATX(' ',ins,STRIP(in));
+      outs         = CATX(' ',outs,STRIP(out));
+      in_entities  = CATX(' ',in_entities,STRIP(in_entity_name));
+      out_entities = CATX(' ',out_entities,STRIP(out_entity_name));
+      unq_in_entities  = CATX(' ',unq_in_entities,STRIP(unq_in_entity_name));
+      unq_out_entities = CATX(' ',unq_out_entities,STRIP(unq_out_entity_name));
     END;
     OUTPUT;
   RUN;
-
-  /* Find unique Entities */
-  PROC SQL;
-    CREATE TABLE unique_in_out_entities AS
-    SELECT DISTINCT entity_name
-    FROM
-    (SELECT in_entity_name as entity_name
-     FROM work.steps_in_out_flow
-     UNION
-     SELECT out_entity_name as entity_name
-     FROM work.steps_in_out_flow);
-  QUIT;
 
   PROC DELETE DATA=work.STEPS_IN_OUT_FLOW; RUN;
 
@@ -745,22 +755,34 @@
     line = strip(line);
 		OUTPUT;
     /* Inputs */
-    line = CATX(' -> ',CATS('{"', TRANWRD(STRIP(in_entities),' ','" "') ,'"}'),CATS('{"',step_name,'"}'));
-    line = strip(line);
-    OUTPUT;
+    if (STRIP(unq_in_entities) ne '') then
+    do;
+      line = CATX(' -> ',CATS('{"', TRANWRD(STRIP(unq_in_entities),' ','" "') ,'"}'),CATS('{"',step_name,'"}'));
+      line = strip(line);
+      OUTPUT;
+    end;
     /* Outputs */
-    line = CATX(' -> ',CATS('{"',step_name,'"}'),CATS('{"', TRANWRD(STRIP(out_entities),' ','" "') ,'"}'));
-    line = strip(line);
-    OUTPUT;
+    if (STRIP(unq_out_entities) ne '') then
+    do;
+      line = CATX(' -> ',CATS('{"',step_name,'"}'),CATS('{"', TRANWRD(STRIP(unq_out_entities),' ','" "') ,'"}'));
+      line = strip(line);
+      OUTPUT;
+    end;
   %end;
   %else
   %do;
     /* Inputs */
-    line = CAT(CATS('{"', TRANWRD(STRIP(in_entities),' ','" "') ,'"}'),' -> ');
-    line = strip(line);
+    if (STRIP(unq_in_entities) ne '') then
+    do;
+      line = CAT(CATS('{"', TRANWRD(STRIP(unq_in_entities),' ','" "') ,'"}'),' -> ');
+      line = strip(line);
+    end;
     /* Outputs */
-    line = CATX(' ',line,CATS('{"', TRANWRD(STRIP(out_entities),' ','" "') ,'"}'));
-    OUTPUT;
+    if (STRIP(unq_out_entities) ne '') then
+    do;
+      line = CATX(' ',line,CATS('{"', TRANWRD(STRIP(unq_out_entities),' ','" "') ,'"}'));
+      OUTPUT;
+    end;
   %end;
   RUN;
   
@@ -771,7 +793,7 @@
     OUTPUT ;
   RUN;
 
-  DATA _NULL_;
+  DATA &p_outDsName;
     FILE "&l_outDotFilePath/&l_outDotFileName" lRECL=6000;
     SET work._flow_start_ 
       work._flow_attrs_
@@ -784,7 +806,7 @@
 
   /* Clean-up */
   PROC DATASETS LIB=WORK NOLIST;
-    DELETE _flow_: in_out_info_flow single_line_dag unique_in_out_entities;
+    DELETE _flow_: in_out_info_flow single_line_dag unique_in_out_entities unqEntity_fmtds;
   RUN; QUIT;
 
   /* Terminate the collection and close the output file */
