@@ -1,0 +1,7 @@
+{
+  "bundle": "t002_usage_xxxxscaproc",
+  "source_file": "code/programs/usage_util_xxxxscaproc.sas",
+  "source_blob_sha": "595cfff3c39aade184cf169dabc72fcd35825b46",
+  "source_commit": "c69733526985357494a2a347cafdd0728eac0536",
+  "notes": "Illustrates %util_initScaproc/%util_termScaproc gating (unmodified, from code/macros/); PROC IMPORT block dropped (hardcoded external paths, output unused downstream); sashelp.prdsale swapped for an 8-row mock table with prdsale's column shape (year quarter month country region division actual predict) since prdsale isn't in this engine's sashelp set. PROC SUMMARY NWAY, the %split macro caller, the two-year US comparison DATA step, and PROC EXPORT are byte-identical to the source script's logic."
+}
