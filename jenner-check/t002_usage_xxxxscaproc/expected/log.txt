@@ -1,0 +1,36 @@
+NOTE: Option OBS changed to 100.
+NOTE: DATA work.prdsale
+
+NOTE: Processing inline DATALINES (8 lines)
+
+NOTE: Read 8 rows from DATALINES.
+NOTE: Wrote work.prdsale (8 rows, 8 columns).
+NOTE: DATA elapsed:
+  wall  0.00 seconds
+  cpu   0.00 seconds
+NOTE: PROC SCAPROC is not available in this build. If you need this procedure, contact us — implementation may be added on request.
+NOTE: PROC MEANS
+NOTE: Output dataset work.prdsal_agg has 8 observations and 10 variables.
+NOTE: PROC MEANS statement used.
+NOTE: PROC MEANS
+NOTE: Output dataset work._1993_agg has 4 observations and 7 variables.
+NOTE: PROC MEANS statement used.
+NOTE: PROC MEANS
+NOTE: Output dataset work._1994_agg has 4 observations and 7 variables.
+NOTE: PROC MEANS statement used.
+NOTE: DATA work.usa
+
+
+NOTE: Read 4 rows from work._1993_agg.
+NOTE: Read 8 rows from work._1994_agg.
+NOTE: Wrote work.usa (4 rows, 7 columns).
+NOTE: DATA elapsed:
+  wall  0.00 seconds
+  cpu   0.00 seconds
+NOTE: PROC PRINT data=work.usa
+
+NOTE: PROC PRINT completed: 4 observations printed, 7 variables
+NOTE: PROC EXPORT data=work.usa outfile=/tmp/work/r_7ddf1a0b64924f45b7fd3f8f28b24bbd/work/9226e452-b084-420b-98ad-ff4c5e01dc18/usa.csv
+
+NOTE: Exported 4 rows to /tmp/work/r_7ddf1a0b64924f45b7fd3f8f28b24bbd/work/9226e452-b084-420b-98ad-ff4c5e01dc18/usa.csv.
+NOTE: PROC SCAPROC is not available in this build. If you need this procedure, contact us — implementation may be added on request.

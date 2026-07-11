@@ -1,0 +1,7 @@
+{
+  "bundle": "t001_util_init_term_scaproc",
+  "source_file": "code/macros/util_initscaproc.sas, code/macros/util_termscaproc.sas",
+  "source_blob_sha": "util_initscaproc.sas=57db51618d13ffc69aab21b3dadd36d3bc22297c; util_termscaproc.sas=1c50489bbd7c8f79ab5872532fb08075b7c111ef",
+  "source_commit": "c69733526985357494a2a347cafdd0728eac0536",
+  "notes": "Caller bundle exercising the %util_initScaproc/%util_termScaproc enable-flag gating and PROC SCAPROC RECORD/WRITE calls unmodified, bracketing a small PROC MEANS/PROC FREQ analysis on sashelp.class (in place of the source usage program's hardcoded-path PROC IMPORT). The gating logic (%if/%symexist checks) and the PROC SCAPROC calls both execute for real; PROC SCAPROC itself is not implemented in this engine build (logged as a NOTE, not an error) so no recording file is produced, but the macros' own control flow runs exactly as written."
+}

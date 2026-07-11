@@ -1,0 +1,8 @@
+
+country  region  division  _TYPE_  count  actual  predict
+-------  ------  --------  ------  -----  ------  -------
+U.S.A.   EAST    WEST           7      1    1000     1100
+U.S.A.   WEST    EAST           7      1    1200     1150
+U.S.A.   EAST    WEST           7      1    1050     1120
+U.S.A.   WEST    EAST           7      1    1250     1200
+
