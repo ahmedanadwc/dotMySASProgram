@@ -501,9 +501,9 @@
     OUTPUT;
   RUN;
 
-  %if (%superq(l_outJsonFileName) NE ) %then
+  %if (&l_needEdges = Y) %then
   %do;
-    /* Keep the per-step entity links for the JSON writer (steps_in_out_flow is deleted below) */
+    /* Keep the per-step entity links for the JSON / SIMPLE-theme writers (steps_in_out_flow is deleted below) */
     PROC SQL;
       CREATE TABLE work.pscp_stepio AS
       SELECT DISTINCT step, unq_in_entity_name, unq_out_entity_name
@@ -578,6 +578,44 @@
   @details Internal helper of %util_parseScaproc. Runs after pscp_addRuntimes and before pscp_writeDot,
   while in_out_info_flow, unique_in_out_entities, pscp_stepio and the $unqEntity./stepname. formats exist.
 **/
+/**
+  @brief Builds one edge per row (source, target, kind) from the per-step entity links.
+  @details Internal helper of %util_parseScaproc, shared by the JSON writer and the SIMPLE DOT theme.
+  p_stepIdDs maps step -> the id of its node, so each writer can use its own step node ids.
+  @param [in] p_stepIdDs= data set with columns step, id (used when p_includeSteps_yn=Y)
+  @param [out] p_outDsName= edges data set (source, target, kind), sorted by those columns
+**/
+%MACRO pscp_buildEdges(p_stepIdDs=, p_outDsName=);
+
+  PROC SQL;
+  %if (&l_includeSteps_yn EQ Y) %then
+  %do;
+    /* Edges input -> step -> output */
+    CREATE TABLE &p_outDsName AS
+    SELECT DISTINCT io.unq_in_entity_name AS source LENGTH=210, s.id AS target LENGTH=210
+      , 'input' AS kind LENGTH=10
+    FROM work.pscp_stepio AS io INNER JOIN &p_stepIdDs AS s ON io.step = s.step
+    WHERE io.unq_in_entity_name NE ''
+    UNION
+    SELECT DISTINCT s.id, io.unq_out_entity_name, 'output'
+    FROM work.pscp_stepio AS io INNER JOIN &p_stepIdDs AS s ON io.step = s.step
+    WHERE io.unq_out_entity_name NE '';
+  %end;
+  %else
+  %do;
+    /* No step nodes: link inputs directly to outputs */
+    CREATE TABLE &p_outDsName AS
+    SELECT DISTINCT a.unq_in_entity_name AS source LENGTH=210, b.unq_out_entity_name AS target LENGTH=210
+      , 'flow' AS kind LENGTH=10
+    FROM work.pscp_stepio AS a INNER JOIN work.pscp_stepio AS b ON a.step = b.step
+    WHERE a.unq_in_entity_name NE '' AND b.unq_out_entity_name NE '';
+  %end;
+  QUIT;
+
+  PROC SORT DATA=&p_outDsName; BY source target kind; RUN;
+
+%MEND pscp_buildEdges;
+
 %MACRO pscp_writeJson;
 
   %LOCAL l_jsonPath;
@@ -624,24 +662,14 @@
     SELECT DISTINCT PUT(step,stepname.), STRIP(SCAN(PUT(step,stepname.),2,'_')), 'step', step
     FROM work.pscp_stepio;
 
-    CREATE TABLE work.pscp_json_edges AS
-    SELECT DISTINCT unq_in_entity_name AS source LENGTH=210, PUT(step,stepname.) AS target LENGTH=210
-      , 'input' AS kind LENGTH=10
-    FROM work.pscp_stepio WHERE unq_in_entity_name NE ''
-    UNION
-    SELECT DISTINCT PUT(step,stepname.), unq_out_entity_name, 'output'
-    FROM work.pscp_stepio WHERE unq_out_entity_name NE '';
-  %end;
-  %else
-  %do;
-    /* No step nodes: link inputs directly to outputs */
-    CREATE TABLE work.pscp_json_edges AS
-    SELECT DISTINCT a.unq_in_entity_name AS source LENGTH=210, b.unq_out_entity_name AS target LENGTH=210
-      , 'flow' AS kind LENGTH=10
-    FROM work.pscp_stepio AS a INNER JOIN work.pscp_stepio AS b ON a.step = b.step
-    WHERE a.unq_in_entity_name NE '' AND b.unq_out_entity_name NE '';
+    /* JSON step node ids include the run-time, e.g. "_01_SUMMARY (0:00:00.02)" */
+    CREATE TABLE work.pscp_json_stepid AS
+    SELECT DISTINCT step, PUT(step,stepname.) AS id LENGTH=210
+    FROM work.pscp_stepio;
   %end;
   QUIT;
+
+  %pscp_buildEdges(p_stepIdDs=work.pscp_json_stepid, p_outDsName=work.pscp_json_edges)
 
   PROC SORT DATA=work.pscp_json_nodes; BY id; RUN;
   DATA work.pscp_json_nodes;   /* one node per id */
@@ -650,7 +678,6 @@
     IF (first.id);
   RUN;
   PROC SORT DATA=work.pscp_json_cols;  BY id seq; RUN;
-  PROC SORT DATA=work.pscp_json_edges; BY source target kind; RUN;
 
   /* Header */
   DATA _NULL_;
@@ -731,6 +758,15 @@
   %if (&l_outDot_yn = Y) %then
   %do;
 
+  /* SIMPLE theme: no global node defaults, so each data set node carries its own shape/colour */
+  %LOCAL l_dsNodeAttrs;
+  %let l_dsNodeAttrs = ;
+  %if (&l_dotTheme = SIMPLE) %then
+  %do;
+    %if (&l_includeAttrs_yn EQ Y) %then %let l_dsNodeAttrs = %str(shape=table color=lightblue style=filled );
+    %else %let l_dsNodeAttrs = %str(shape=cylinder color=lightblue style=filled );
+  %end;
+
   * ---------------;
   * Create .DOT directives to make a diagram ;
   * ---------------;
@@ -754,7 +790,11 @@
   %do;
     line='node [shape=cylinder color=lightblue style=filled]' ;
   %end;
-    OUTPUT ;    
+  %if (&l_dotTheme NE SIMPLE) %then
+  %do;
+    /* DEFAULT theme: global node defaults. SIMPLE theme styles every node explicitly instead. */
+    OUTPUT ;
+  %end;
   RUN;
 
   PROC SQL;
@@ -781,7 +821,7 @@
         /* Data set */
         /*WHEN (STRIP(flow.dsname) ne '' AND STRIP(flow.filename) eq '') THEN*/
         ELSE
-          '"'||STRIP(PUT(flow.entity_name,$unqEntity.))||'" [label=<<TABLE BORDER="0" CELLSPACING="0"><TR><TD BORDER="0" COLSPAN="2" CELLPADDING="0"><FONT POINT-SIZE="12">'
+          '"'||STRIP(PUT(flow.entity_name,$unqEntity.))||'" ['||"&l_dsNodeAttrs"||'label=<<TABLE BORDER="0" CELLSPACING="0"><TR><TD BORDER="0" COLSPAN="2" CELLPADDING="0"><FONT POINT-SIZE="12">'
              || STRIP(PUT(flow.entity_name,$unqEntity.))||'</FONT></TD></TR>'
       END as line LENGTH=6000 FORMAT=$6000.
 
@@ -807,6 +847,47 @@
     end;
   RUN;
  
+  %if (&l_dotTheme = SIMPLE) %then
+  %do;
+    /* SIMPLE theme: one quoted "source" -> "target" statement per edge (no {a b} -> {c} set syntax) */
+  %if (&l_includeSteps_yn = Y) %then
+  %do;
+    PROC SQL;
+      CREATE TABLE work.pscp_dot_stepid AS
+      SELECT DISTINCT step, step_name AS id LENGTH=210
+      FROM work.single_line_dag;
+    QUIT;
+  %end;
+
+    %pscp_buildEdges(p_stepIdDs=work.pscp_dot_stepid, p_outDsName=work.pscp_dot_edges)
+
+    DATA work._flow_dag_(KEEP=line);
+      LENGTH line $32767;
+      SET
+  %if (&l_includeSteps_yn = Y) %then
+  %do;
+        work.single_line_dag(KEEP=step step_name IN=isStep)
+  %end;
+        work.pscp_dot_edges(IN=isEdge);
+
+      IF (isEdge) THEN
+      DO;
+        line = CATS('"', source, '" -> "', target, '"');
+        OUTPUT;
+      END;
+  %if (&l_includeSteps_yn = Y) %then
+  %do;
+      ELSE
+      DO;
+        line = CATS('"', step_name, '"')||' [shape="oval" label="'||STRIP(SCAN(PUT(step,stepname.),2,'_'))||'" color=yellow style=filled ]';
+        OUTPUT;
+      END;
+  %end;
+    RUN;
+  %end; /* End - SIMPLE theme dag */
+  %else
+  %do; /* DEFAULT theme dag */
+
   /* Write out the Dag */
 	DATA work._flow_dag_(KEEP=line) ;
 		LENGTH line $32767 step_name $60;
@@ -851,6 +932,8 @@
   %end;
   RUN;
   
+  %end; /* End - DEFAULT theme dag */
+
   * Last: Produce closing lines;
   DATA work._flow_end_ ;
     LENGTH line $32767;
@@ -946,6 +1029,12 @@
                            Set to N when only the JSON graph is needed; p_outJsonFileName is then
                            required (rc 4 otherwise). Default:Y.
 
+  @param [in] p_dotTheme= The format of the GRAPHVIZ (*.dot) file. Valid Values:DEFAULT|SIMPLE. Default:DEFAULT.
+                          - DEFAULT: global "node [...]" style line, and grouped edges {"a" "b"} -> {"c"}.
+                          - SIMPLE: no global node defaults (every node carries its own shape/colour:
+                            tables for data sets, notes for files, ovals for steps) and one quoted
+                            "source" -> "target" statement per edge, which more tools can parse.
+
   @return Global macro variable g_parseScaprocRC: 0 on success, non-zero on a validation error.
 
   @param [in] p_debug= A Y/N flag to print diagnostic messages to the log. Default:N.
@@ -966,7 +1055,8 @@
 , p_rankDir=TB
 , p_debug=N
 , p_outJsonFileName=
-, p_outDot_yn=Y) / minoperator;
+, p_outDot_yn=Y
+, p_dotTheme=DEFAULT) / minoperator;
 
   %LOCAL
     l_eTime
@@ -986,6 +1076,8 @@
     l_logsRoot
     l_outJsonFileName
     l_outDot_yn
+    l_dotTheme
+    l_needEdges
     l_outDotFilePath
     l_outDotFileName
     l_outDsName
@@ -1074,6 +1166,20 @@
   %let l_outDotFileName = &p_outDotFileName;
   %if (%superq(l_outDotFileName) EQ ) %then
     %let l_outDotFileName = mydigraph.dot;
+
+  %let l_dotTheme = DEFAULT;
+  %if (%superq(p_dotTheme) NE ) %then
+    %let l_dotTheme = %upcase(&p_dotTheme);
+  %if NOT (&l_dotTheme IN (DEFAULT SIMPLE)) %then
+  %do;
+    %PUT WARNING: Acceptable p_dotTheme values: DEFAULT|SIMPLE. Defaulting to: DEFAULT;
+    %let l_dotTheme = DEFAULT;
+  %end;
+
+  /* The per-step entity links are needed by the JSON writer and the SIMPLE theme */
+  %let l_needEdges = N;
+  %if (%length(%superq(l_outJsonFileName)) GT 0) %then %let l_needEdges = Y;
+  %if (&l_dotTheme = SIMPLE AND &l_outDot_yn = Y) %then %let l_needEdges = Y;
 
   %let l_outDsName = &p_outDsName;
   %if (%superq(l_outDsName) EQ ) %then

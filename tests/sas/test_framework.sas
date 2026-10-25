@@ -36,6 +36,50 @@
   RUN;
 %mend t_cleanDir;
 
+/* Count edge endpoints in a SIMPLE-theme .dot file that have no node definition line */
+%macro t_dotDangling(p_file=, p_outVar=);
+  %global &p_outVar;
+  DATA _NULL_;
+    INFILE "&p_file" LRECL=32767 END=eof;
+    INPUT;
+    LENGTH id $210;
+    RETAIN rxNode rxEdge;
+    if (_n_ = 1) then
+    do;
+      rxNode = PRXPARSE('/^"([^"]+)" \[/');
+      rxEdge = PRXPARSE('/^"([^"]+)" -> "([^"]+)"$/');
+      DECLARE HASH nodes();
+      nodes.definekey('id');
+      nodes.definedone();
+      DECLARE HASH ends();
+      ends.definekey('id');
+      ends.definedone();
+      DECLARE HITER ei('ends');
+    end;
+    if (PRXMATCH(rxNode, _INFILE_)) then
+    do;
+      id = PRXPOSN(rxNode, 1, _INFILE_);
+      rc = nodes.replace();
+    end;
+    else if (PRXMATCH(rxEdge, _INFILE_)) then
+    do;
+      id = PRXPOSN(rxEdge, 1, _INFILE_); rc = ends.replace();
+      id = PRXPOSN(rxEdge, 2, _INFILE_); rc = ends.replace();
+    end;
+    if (eof) then
+    do;
+      dangling = 0;
+      rc = ei.first();
+      do while (rc = 0);
+        if (nodes.check() ne 0) then dangling + 1;
+        rc = ei.next();
+      end;
+      /* -1 = no edge endpoints found at all, so a "0 dangling" result can't pass vacuously */
+      CALL SYMPUTX("&p_outVar", IFN(ends.num_items = 0, -1, dangling));
+    end;
+  RUN;
+%mend t_dotDangling;
+
 /* Count regex matches (Perl syntax, no parentheses) across all lines of a file into a macro variable */
 %macro t_countRegex(p_file=, p_regex=, p_outVar=);
   %global &p_outVar;
