@@ -22,6 +22,10 @@
                                  Default:Y.
   @param [in] p_rankDir= Sets direction of graph layout. Valid Values:TB|BT|LR|RL.
                          Default:TB.
+  @param [in] p_outJson_yn= A Y/N flag to also write a JSON graph (nodes/edges) next to every
+                            *.dot file, named after the input file with a .json extension. Default:N.
+  @param [in] p_outDot_yn= A Y/N flag to write the *.dot files. Set to N for JSON-only output
+                           (requires p_outJson_yn=Y). Default:Y.
 
   @version 9.4
   @author Ahmed Al-Attar
@@ -33,7 +37,9 @@
 , p_outDotFilesDir=
 , p_includeAttrs_yn=Y
 , p_includeSteps_yn=Y
-, p_rankDir=TB) / minoperator;
+, p_rankDir=TB
+, p_outJson_yn=N
+, p_outDot_yn=Y) / minoperator;
   
 	%LOCAL  
 		l_eTime
@@ -47,6 +53,8 @@
     l_dotfilename
 		l_includeAttrs_yn
 		l_includeSteps_yn
+		l_outJson_yn
+		l_outDot_yn
 		l_rankDir
     ;
 
@@ -81,13 +89,28 @@
   /********** END -- Macro Parameter Validation **********/
 
 	%let l_includeAttrs_yn = Y;
-	%if (&p_includeAttrs_yn NE ) %then
+	%if (%superq(p_includeAttrs_yn) NE ) %then
 		%let l_includeAttrs_yn = %upcase(&p_includeAttrs_yn);
 
 	%let l_includeSteps_yn = Y;
 	%if (%superq(p_includeSteps_yn) NE ) %then
 		%let l_includeSteps_yn = %upcase(&p_includeSteps_yn);
 
+	%let l_outJson_yn = N;
+	%if (%superq(p_outJson_yn) NE ) %then
+		%let l_outJson_yn = %upcase(&p_outJson_yn);
+
+	%let l_outDot_yn = Y;
+	%if (%superq(p_outDot_yn) NE ) %then
+		%let l_outDot_yn = %upcase(&p_outDot_yn);
+	%if (&l_outDot_yn NE Y AND &l_outJson_yn NE Y) %then
+	%do;
+		%let l_rc  = 5;
+		%let l_msg = ERROR: util_scaText2graphvizDot: p_outDot_yn=N requires p_outJson_yn=Y (nothing would be written);
+		%goto exit;
+	%end;
+
+	%let l_rankDir = TB;
 	%if (%superq(p_rankDir) NE ) %then
 		%let l_rankDir = %upcase(&p_rankDir);
 	%if NOT (&l_rankDir IN (TB BT LR RL)) %then
@@ -104,38 +127,52 @@
 
 	DATA _NULL_;
 		LENGTH
-			LINE $400
-			FILE_NAME $100
-			NEW_NAME $100
-			FILE_TYPE $10
-			DS_NAME $41;
+			LINE $1000
+			FILE_NAME $256
+			NEW_NAME $256
+			JSON_NAME $256
+			DS_NAME $32;
 
-		FILE tmplstng LRECL=400;
-		INFILE "&p_inTxtFileList" LRECL=400;
-
-		if (_N_=1) then
-			PUT "LIBNAME _dotLib_ '&p_outDotFilesDir'; ";
+		FILE tmplstng LRECL=2000;
+		INFILE "&p_inTxtFileList" LRECL=1000;
 
 		INPUT; /* Read a line */
     IF MISSING(_INFILE_) EQ 0; /* Only process none-blank lines */
 
     LINE =TRANSLATE(STRIP(COMPBL(_INFILE_)),'/','\'); /* Remove extra Spaces, and convert \ to / */
     FILE_NAME = SCAN(LINE,-1,'/');
-    FILE_TYPE = SCAN(FILE_NAME,2,'.');
-		NEW_NAME  = TRANWRD(STRIP(FILE_NAME),STRIP(FILE_TYPE),'dot');
-		DS_NAME = CATS('_dotlib_.dotfile_',PUT(_n_,z4.));
+    /* Swap only the final extension (names may contain other dots or the text 'txt') */
+		_pos = FINDC(FILE_NAME,'.','b');
+		if (_pos > 1) then NEW_NAME = CATS(SUBSTR(FILE_NAME,1,_pos-1),'.dot');
+		else NEW_NAME = CATS(FILE_NAME,'.dot');
+		DS_NAME = CATS('work.dotfile_',PUT(_n_,z4.));
+		JSON_NAME = CATS(SUBSTR(NEW_NAME,1,LENGTHN(STRIP(NEW_NAME))-3),'json');
 
-		/* Generate the required macro call dynamically */
-		PUT '%util_parseScaproc(p_inScaprocFileName=' LINE ;
-		PUT ", p_outDotFilePath=%str(&p_outDotFilesDir)";
-		PUT ', p_outDotFileName=' NEW_NAME ;
+		/* Generate the required macro call dynamically; %nrstr protects paths containing , & % ( ) */
+		PUT '%util_parseScaproc(p_inScaprocFileName=%nrstr(' LINE +(-1) ')';
+		PUT ", p_outDotFilePath=%nrstr(&p_outDotFilesDir)";
+		PUT ', p_outDotFileName=%nrstr(' NEW_NAME +(-1) ')';
 		PUT ', p_outDsName=' DS_NAME;
-		PUT ", p_includeAttrs_yn=&l_includeAttrs_yn";
+		PUT ", p_includeAttrs_yn=&l_includeAttrs_yn, p_outDot_yn=&l_outDot_yn";
+	%if (&l_outJson_yn = Y) %then
+	%do;
+		PUT ", p_includeSteps_yn=&l_includeSteps_yn, p_rankDir=&l_rankDir";
+		PUT ', p_outJsonFileName=%nrstr(' JSON_NAME +(-1) '))';
+	%end;
+	%else
+	%do;
 		PUT ", p_includeSteps_yn=&l_includeSteps_yn, p_rankDir=&l_rankDir)";
+	%end;
 	RUN;
 
 	/* Execute the dynamically generated macro calls */
 	%include tmplstng;
+	FILENAME tmplstng CLEAR;
+
+	/* The per-file parse results are not needed after the .dot files are written */
+	PROC DATASETS LIB=WORK NOLIST NOWARN;
+		DELETE dotfile_:;
+	RUN; QUIT;
 
 	%GOTO finished;
 

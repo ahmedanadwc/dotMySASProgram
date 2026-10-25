@@ -1,171 +1,74 @@
+/* =====================================================================
+   Internal stage macros for %util_parseScaproc (declared before it, in run order)
+   ===================================================================== */
+
 /**
-  @file util_parsescaproc.sas
-  @brief Parses out the output generated SAS Code Analyzer.
-  @details Parses out the output generated SAS Code Analyzer,
-  and generated *.dot output file, that could be rendered by any
-  Graphviz (https://www.graphviz.org/) Viewer/Renderer be it
-    - Web Viewer: http://webgraphviz.com/
-    - VS Code extension: Graphviz (dot) language support for Visual Studio Code
-      (https://marketplace.visualstudio.com/items?itemName=joaompinto.vscode-graphviz)
-
-  The inspiration for this code originted from
-    - Code presented in
-      "Automatically create diagrams showing the structure and performance of your SAS code"
-      https://support.sas.com/resources/papers/proceedings17/1104-2017.pdf
-      https://github.com/philipmason/Wood-Street-Consultants/tree/main/SCAPROC/SAS
-    - Code presented in
-      "SCAPROC Impact Analysis - Providing QA and Compliance Insights"
-      https://www.lexjansen.com/phuse/2016/tt/TT02.pdf
-      Sample 58878: SAS® Life Science Analytics Framework - 
-      SCAPROC Impact Analysis: Providing QA and Compliance Insights
-      https://support.sas.com/kb/58/878.html
-      https://support.sas.com/kb/58/047.html
-    - Code presented in
-      "QA and Compliance Insights Using the SCAPROC Procedure"
-      https://www.pharmasug.org/proceedings/2016/MS/PharmaSUG-2016-MS04.pdf
-    - SASjs generated lineage documentation
-      https://cli.sasjs.io/doc/
-      https://www.youtube.com/watch?v=Sb1DqTLgVyQ&t=182s
-      https://www.youtube.com/watch?v=9ea9vn7YmfM
- 
-  Example usage:
-  
-      %util_parseScaproc(p_inScaprocFileName=
-      , p_outDotFilePath=%sysfunc(pathname(WORK))
-      , p_outDotFileName=mydigraph.dot
-      , p_outDsName=work.mydigraph
-      , p_includeAttrs_yn=Y, p_includeSteps_yn=Y)
-
-  @param [in] p_inScaprocFileName= The name of the SAS Code Analysis recording file. Required.
-  @param [in] p_outDotFilePath= The GRAPHVIZ (*.dot) output file path. Required. 
-                                Default: %sysfunc(pathname(WORK)).
-  @param [in] p_outDotFileName= The GRAPHVIZ (*.dot) output file name. Required.
-                                Default: mydigraph.dot
-  @param [in] p_outDsName= The output data set name of the parsing results. Optional.
-  @param [in] p_includeAttrs_yn= A Y/N flag to include table columns in the output. Default:Y.
-  @param [in] p_includeSteps_yn= A Y/N flag to include processing steps and elapse times in the output. 
-                                 Default:Y.
-  @param [in] p_rankDir= Sets direction of graph layout. Valid Values:TB|BT|LR|RL.
-                         Default:TB.
-
-  @n[util_parseScaproc Flow Diagram](../diagrams/util_parseScaproc.svg)
-
-  @version 9.4
-  @author Ahmed Al-Attar
-
+  @brief Collapses the per-line flow records into one record per grouping key.
+  @details Internal helper of %util_parseScaproc (uses l_stepFmt from the caller).
+  @param [in] p_inDsName= input flow data set
+  @param [out] p_outDsName= output data set
+  @param [in] p_byVarName= BY variable whose LAST. ends a group
+  @param [in] p_byVarNames= full BY statement variable list
 **/
+  %MACRO pscp_getFlowDataSet(p_inDsName=
+    , p_outDsName=
+    , p_byVarName=
+    , p_byVarNames=);
 
-%MACRO util_parseScaproc(p_inScaprocFileName=
-, p_outDotFilePath=%sysfunc(pathname(WORK))
-, p_outDotFileName=mydigraph.dot
-, p_outDsName=
-, p_includeAttrs_yn=Y
-, p_includeSteps_yn=Y
-, p_rankDir=TB) / minoperator;
+    /* Merge the data into one record for each step */
+    DATA &p_outDsName (KEEP=step step_name 'in'n 'out'n in_dsname out_dsname in_filename out_filename 
+                            in_entity_name out_entity_name unq_in_entity_name unq_out_entity_name);
+      LENGTH 
+        step 5
+        step_name $60
+        in_dsname out_dsname $200
+        in_filename out_filename 'in'n 'out'n $200
+        in_entity_name out_entity_name unq_in_entity_name unq_out_entity_name $210;
 
-  %LOCAL
-    l_eTime
-    l_MSG
-    l_RC
-    l_rTime
-    l_sTime
-    ;
+      RETAIN step step_name in_dsname out_dsname 
+        in_filename out_filename 
+        in_entity_name out_entity_name
+        unq_in_entity_name unq_out_entity_name;
+ 
+      DO UNTIL (last.&p_byVarName);
+        SET &p_inDsName(RENAME=(step=ds_step 
+          dsname=ds_dsname filename=ds_filename entity_name=ds_entity_name));
+        BY &p_byVarNames;
 
-  %LOCAL
-    l_inScaprocFileName
-    l_scaprocFileName
-    l_scaprocFolderName
-    l_outDotFilePath
-    l_outDotFileName
-    l_outDsName
-    l_stepFmt
-    l_includeAttrs_yn
-    l_includeSteps_yn
-    l_rankDir
-    l_impExpSteps
-    l_dataSteps
-    l_impExpStepsCnt
-    l_impExpStepsExclude
-    l_stepsCount
-    l_concatLibObsCount
-    ;
+        if (first.&p_byVarName) then
+          CALL MISSING (step, step_name, in_dsname, out_dsname
+            , in_filename, out_filename, in_entity_name, out_entity_name
+            , unq_in_entity_name, unq_out_entity_name);
 
-  %let l_sTime=%sysfunc(time());
+        if (step = .) then step = ds_step;
+        if (step_name = '') then step_name = '_'||CATX("_",PUT(ds_step,&l_stepFmt.),PUT(ds_step,stepname.));
+        if (in_dsname = '')  then if (strip(source)='i') then in_dsname = ds_dsname;
+        if (in_filename = '')  then if (strip(source)='i') then in_filename = ds_filename;
+        if (in_entity_name = '')  then if (strip(source)='i') then in_entity_name = ds_entity_name;
+        if (unq_in_entity_name = '')  then if (strip(source)='i') then unq_in_entity_name = PUT(ds_entity_name,$unqEntity.);
+        if (out_dsname = '')  then if (strip(source)='o') then out_dsname = ds_dsname;
+        if (out_filename = '')  then if (strip(source)='o') then out_filename = ds_filename;
+        if (out_entity_name = '')  then if (strip(source)='o') then out_entity_name = ds_entity_name;
+        if (unq_out_entity_name = '')  then if (strip(source)='o') then unq_out_entity_name = PUT(ds_entity_name,$unqEntity.);
+      END;
+      'in'n  = coalescec(in_dsname,in_filename);  
+      'out'n = coalescec(out_dsname,out_filename);
+      if (CATS(in_dsname,out_dsname,in_filename,out_filename,in_entity_name,out_entity_name) ne '') then
+      OUTPUT;
+    RUN;
+  %MEND pscp_getFlowDataSet;
 
-  /* Initialize the collection and open the output file */
-  %util_initScaproc(p_enableFlagName=g_enableScaProc
-  , p_outFilePath=%str(&g_logsRoot)
-  , p_outFileName=sca__util_parseScaproc.txt);
-
-  /********** BEGIN -- Macro Parameter Validation **********/
-  /* Check if the p_inScaprocFileName is specified or not */
-  %if (%superq(p_inScaprocFileName) EQ ) %then 
-  %do;
-    %let l_rc  = 1;
-    %let l_msg = ERROR: util_parseScaproc: p_inScaprocFileName is invalid. Please specify non-missing value;
-    %goto exit;
-  %end;
-  %else 
-  %do;
-    /* Convert \ to / for supplied parameter paths */
-    %let l_inScaprocFileName = %sysfunc(translate(&p_inScaprocFileName,%str(/),%str(\)));
-
-    %if (%sysfunc(fileexist(&l_inScaprocFileName)) EQ 1) %then 
-    %do;
-      %let l_scaprocFileName = %scan(&l_inScaprocFileName,-1,%str(/));
-      %let l_scaprocFolderName =%sysfunc(prxchange(s/&l_scaprocFileName//,-1,&l_inScaprocFileName));
-      %put &=l_scaprocFileName &=l_scaprocFolderName;
-    %end;
-    %else 
-    %do;
-      %let l_rc  = 2;
-      %let l_msg = ERROR: util_parseScaproc: p_inScaprocFileName is invalid. Please specify an existing file;
-      %goto exit;
-    %end;
-  %end;
-
-  /* Set Defaults */
-  %let l_outDotFilePath = &p_outDotFilePath;
-  %if (%superq(l_outDotFilePath) EQ ) %then
-    %let l_outDotFilePath = %sysfunc(pathname(WORK));
-  %else
-    %let l_outDotFilePath = %sysfunc(translate(&l_outDotFilePath,%str(/),%str(\)));
-
-  %let l_outDotFileName = &p_outDotFileName;
-  %if (%superq(l_outDotFileName) EQ ) %then
-    %let l_outDotFileName = mydigraph.dot;
-
-  %let l_outDsName = &p_outDsName;
-  %if (%superq(l_outDsName) EQ ) %then
-    %let l_outDsName=work.mydigraph;
-
-  %let l_includeAttrs_yn = Y;
-  %if (%superq(p_includeAttrs_yn) NE ) %then
-    %let l_includeAttrs_yn = %upcase(&p_includeAttrs_yn);
-
-  %let l_includeSteps_yn = Y;
-  %if (%superq(p_includeSteps_yn) NE ) %then
-    %let l_includeSteps_yn = %upcase(&p_includeSteps_yn);
-
-  %if (%superq(p_rankDir) NE ) %then
-    %let l_rankDir = %upcase(&p_rankDir);
-  %if NOT (&l_rankDir IN (TB BT LR RL)) %then
-  %do;
-    %PUT WARNING: Acceptable p_rankDir values: TB|BT|LR|RL. Defaulting to: TB;
-    %let l_rankDir = TB;
-  %end;
-
-  /* Set the direction to LR when the columns attributes in included */
-  %if (&l_includeAttrs_yn = Y) %then
-    %let l_rankDir = LR;
-
-  /********** END -- Macro Parameter Validation **********/
-  %let l_concatLibObsCount = 0;
+/**
+  @brief Stage 1: reads the SCA text file; builds the concatenated-library format.
+  @details Internal helper of %util_parseScaproc. Shares the caller's %LOCAL macro variables
+  (l_*) and the WORK tables created by the preceding stages.
+**/
+%MACRO pscp_readRecording;
 
   /* Read the SCA text file */
   DATA work.scadata(DROP=rc);
     INFILE "&l_inScaprocFileName" LRECL=1000 LENGTH=linelength truncover END=eof;
-    LENGTH scaline $1000 file_linenum sca_linenum step 5 libref libname $8;
+    LENGTH scaline $1000 file_linenum sca_linenum step 5 libref libname lineEnd $8;
     LABEL 
 		scaline = 'SCA line'
 		file_linenum = 'SCA file line number' 
@@ -189,8 +92,9 @@
     do;
     	sca_linenum+1;
     	if (_n_=1 OR index(scaline,'STEP SOURCE FOLLOWS')) then step+1 ;
-    	OUTPUT;
-    	
+    	/* Only JOBSPLIT lines are used downstream, so don't persist the rest */
+    	if (index(scaline,'JOBSPLIT') > 0) then OUTPUT;
+
     	/* JOBSPLIT: CONCATMEM #C00003 SASHELP */
     	if (index(scaline,'CONCATMEM') gt 0) then
     	do;
@@ -211,11 +115,11 @@
 
   /* Find the Max Step count */
   PROC SQL NOPRINT;
-    SELECT CATS('Z',max(2,ceil(log10(MAX(step)))),'.')
+    SELECT CATS('Z',max(2,floor(log10(MAX(step,1)))+1),'.')
     INTO :l_stepFmt
     FROM  work.scadata;
   QUIT;
-  %put &=l_stepFmt;
+  %if (&l_debug = Y) %then %put &=l_stepFmt;
 
   /**
   * Find Concatenated Libraries 
@@ -225,7 +129,7 @@
     call symputx("l_concatLibObsCount",nobs);
   RUN;
 
-  %put &=l_concatLibObsCount;
+  %if (&l_debug = Y) %then %put &=l_concatLibObsCount;
   %if (&l_concatLibObsCount GT 0) %then
   %do;
   DATA work.sca_libs;
@@ -236,15 +140,23 @@
   %end;
   PROC DELETE DATA=work.sca_libs; RUN;
 
+
+%MEND pscp_readRecording;
+
+/**
+  @brief Stage 2: extracts step inputs/outputs/names/run-times and the stepname. format.
+  @details Internal helper of %util_parseScaproc. Shares the caller's %LOCAL macro variables
+  (l_*) and the WORK tables created by the preceding stages.
+**/
+%MACRO pscp_extractIO;
+
   /* Identify Input & Output data sets and their variables */
   DATA work.scadata1 (KEEP=scaline sca_linenum step )
   		work.step_inputs (KEEP=step sca_linenum dsname variable type filename entity_name) 
   		work.step_outputs (KEEP=step sca_linenum dsname variable type filename entity_name)
-  %if (&l_includeSteps_yn = Y) %then 
-  %do; 
-      work.step_runtimes (KEEP=step step_start_dt ) 
+      /* Always created: the stepname. format is needed even when p_includeSteps_yn=N */
+      work.step_runtimes (KEEP=step step_start_dt )
       work.step_names(KEEP=step step_name type fmtname)
-  %end;
   		;
   	
   	/* Ignoring SASTemp outputs, Global Macro Variables and UTILITY files */
@@ -261,17 +173,20 @@
     	type $15 
     	step_start_dt 8 
     	filename $200
-    	step_name $30
+    	step_name $60
     	entity_name $210;
-    	
+
     FORMAT step_start_dt datetime22.2;
     filename='';
-    
+
     OUTPUT work.scadata1;
 
-  %if (&l_includeSteps_yn = Y) %then 
-  %do; 
-    IF (   (indexw(scaline,"TASKSTARTTIME") > 0) 
+    /* Evaluate each keyword test once per line */
+    is_attr = indexw(scaline,"ATTR") > 0;
+    is_file = indexw(scaline,"FILE") > 0;
+    is_dset = indexw(scaline,"DATASET") > 0;
+
+    IF (   (indexw(scaline,"TASKSTARTTIME") > 0)
     	OR (indexw(scaline,"JOBENDTIME") > 0) ) THEN
     DO;
    		step_start_dt = INPUT(SCAN(scaline,4,' '), datetime22.2);
@@ -284,13 +199,9 @@
     	fmtname = 'stepName';
     	OUTPUT work.step_names;
     END;
-    ELSE 
-  %end; /* End - (&l_includeSteps_yn = Y) */ 
-     IF ( (indexw(scaline,"ATTR") > 0) 
-              OR (indexw(scaline,"DATASET") > 0)
-              OR (indexw(scaline,"FILE") > 0) ) THEN 
+    ELSE IF (is_attr OR is_dset OR is_file) THEN
     DO;
-	    IF (indexw(scaline,"ATTR") > 0) THEN 
+	    IF (is_attr) THEN
 	    DO;
 	    	scaline  = SUBSTR(scaline,14);
 	    	dsname   = SCAN(scaline,2,' ');
@@ -301,7 +212,16 @@
     %end;
   			in_flag  = indexw(scaline,"INPUT");
 
-  			scaline  = SUBSTR(scaline,index(scaline,'VARIABLE:'));
+  			/* Guard: skip malformed ATTR lines instead of calling SUBSTR with invalid positions */
+	  			if (   index(scaline,'VARIABLE:') = 0
+	  			    OR index(scaline,'TYPE:')   <= index(scaline,'VARIABLE:')
+	  			    OR index(scaline,'LENGTH:') <= index(scaline,'TYPE:')
+	  			    OR index(scaline,'LABEL:')  <= index(scaline,'LENGTH:') ) then
+	  			do;
+	  				putlog 'NOTE: util_parseScaproc: skipped malformed ATTR line ' sca_linenum=;
+	  				DELETE;
+	  			end;
+	  			scaline  = SUBSTR(scaline,index(scaline,'VARIABLE:'));
   			typ_idx  = index(scaline,'TYPE:');
 	     	variable = substr(scaline,(10),(typ_idx - 10));
 
@@ -315,13 +235,13 @@
 
   			type    = CATX(' ', IFC(type='CHARACTER','char','num') ,CATS('(',len,')') );
 	    END;
-	    ELSE IF (indexw(scaline,"FILE") > 0) THEN 
+	    ELSE IF (is_file) THEN
 	    DO;
 	    	scaline  = SUBSTR(scaline,14);
 	    	filename = SCAN(scaline,3,' ');
         in_flag  = indexw(scaline,"INPUT");
 	    END;
-	    ELSE IF (indexw(scaline,"DATASET") > 0) THEN 
+	    ELSE IF (is_dset) THEN
 	    DO;
 	    	scaline  = SUBSTR(scaline,14);
 	    	dsname   = SCAN(scaline,4,' ');
@@ -356,11 +276,18 @@
     BY step dsname sca_linenum ;
   RUN;
 
-  %if (&l_includeSteps_yn = Y) %then 
-  %do; 
-  /* Create the stepname format */
+  /* Create the stepname format (needed in both Y and N modes) */
   PROC FORMAT CNTLIN=WORK.STEP_NAMES(RENAME=(step=start step_name=label)); RUN;
-  %end;
+
+
+%MEND pscp_extractIO;
+
+/**
+  @brief Stage 3: builds the entity lookup, the per-step flow and the single-line DAG.
+  @details Internal helper of %util_parseScaproc. Shares the caller's %LOCAL macro variables
+  (l_*) and the WORK tables created by the preceding stages.
+**/
+%MACRO pscp_buildFlow;
 
   /** -------
   * Compose logical steps in_out flow
@@ -428,59 +355,9 @@
 
   /* Clean-up */
   PROC DATASETS LIB=WORK NOLIST; 
-    DELETE unqEntity_fmtds_f columns ds_col_cnts; 
+    DELETE unqEntity_fmtds_f;
   RUN; QUIT;
 
-  /** ------
-  * Declare internal macro to process flow records
-   ------- */
-  %macro inner_getFlowDataSet(p_inDsName=
-    , p_outDsName=
-    , p_byVarName=
-    , p_byVarNames=);
-
-    /* Merge the data into one record for each step */
-    DATA &p_outDsName (KEEP=step step_name 'in'n 'out'n in_dsname out_dsname in_filename out_filename 
-                            in_entity_name out_entity_name unq_in_entity_name unq_out_entity_name);
-      LENGTH 
-        step 5
-        step_name $30
-        in_dsname out_dsname $200
-        in_filename out_filename 'in'n 'out'n $200
-        in_entity_name out_entity_name unq_in_entity_name unq_out_entity_name $210;
-
-      RETAIN step step_name in_dsname out_dsname 
-        in_filename out_filename 
-        in_entity_name out_entity_name
-        unq_in_entity_name unq_out_entity_name;
- 
-      DO UNTIL (last.&p_byVarName);
-        SET &p_inDsName(RENAME=(step=ds_step 
-          dsname=ds_dsname filename=ds_filename entity_name=ds_entity_name));
-        BY &p_byVarNames;
-
-        if (first.&p_byVarName) then
-          CALL MISSING (step, step_name, in_dsname, out_dsname
-            , in_filename, out_filename, in_entity_name, out_entity_name
-            , unq_in_entity_name, unq_out_entity_name);
-
-        if (step = .) then step = ds_step;
-        if (step_name = '') then step_name = '_'||CATX("_",PUT(ds_step,&l_stepFmt.),PUT(ds_step,stepname.));
-        if (in_dsname = '')  then if (strip(source)='i') then in_dsname = ds_dsname;
-        if (in_filename = '')  then if (strip(source)='i') then in_filename = ds_filename;
-        if (in_entity_name = '')  then if (strip(source)='i') then in_entity_name = ds_entity_name;
-        if (unq_in_entity_name = '')  then if (strip(source)='i') then unq_in_entity_name = PUT(ds_entity_name,$unqEntity.);
-        if (out_dsname = '')  then if (strip(source)='o') then out_dsname = ds_dsname;
-        if (out_filename = '')  then if (strip(source)='o') then out_filename = ds_filename;
-        if (out_entity_name = '')  then if (strip(source)='o') then out_entity_name = ds_entity_name;
-        if (unq_out_entity_name = '')  then if (strip(source)='o') then unq_out_entity_name = PUT(ds_entity_name,$unqEntity.);
-      END;
-      'in'n  = coalescec(in_dsname,in_filename);  
-      'out'n = coalescec(out_dsname,out_filename);
-      if (CATS(in_dsname,out_dsname,in_filename,out_filename,in_entity_name,out_entity_name) ne '') then
-      OUTPUT;
-    RUN;
-  %mend inner_getFlowDataSet;
 
   /** --------
   * Merge the data into one record for each step 
@@ -488,7 +365,7 @@
   PROC SORT DATA=work.in_out_info_flow;
     BY step entity_name;
   RUN;
-  %inner_getFlowDataSet(p_inDsName=work.in_out_info_flow
+  %pscp_getFlowDataSet(p_inDsName=work.in_out_info_flow
   , p_outDsName=work.steps_in_out_flow
   , p_byVarName=ds_entity_name
   , p_byVarNames=%str(ds_step ds_entity_name))
@@ -516,7 +393,7 @@
     order by t1.step;
   QUIT;
   %let l_impExpStepsCnt = &sqlobs;
-  %put &=l_impExpSteps &=l_impExpStepsCnt;
+  %if (&l_debug = Y) %then %put &=l_impExpSteps &=l_impExpStepsCnt;
 
   PROC DELETE DATA=work.with_known_out; RUN;
 
@@ -543,7 +420,7 @@
     %let l_dataSteps = %substr(%superq(l_dataSteps),2);
     %let l_impExpStepsExclude = %substr(%superq(l_impExpStepsExclude),2);
 
-    %put &=l_dataSteps &=l_impExpStepsExclude;
+    %if (&l_debug = Y) %then %put &=l_dataSteps &=l_impExpStepsExclude;
 
     PROC SORT DATA=work.in_out_info_flow(WHERE=(step in (&l_impExpStepsExclude))) 
       OUT=work.impExp_flow;
@@ -551,7 +428,7 @@
     RUN;
 
     /* Merge the data into one record for each step */
-    %inner_getFlowDataSet(p_inDsName=work.impExp_flow
+    %pscp_getFlowDataSet(p_inDsName=work.impExp_flow
     , p_outDsName=work.impExp_flow2
     , p_byVarName=ds_step
     , p_byVarNames=%str(ds_step sca_linenum));
@@ -571,8 +448,8 @@
           END as 'out'n
         , coalesce(b.in_entity_name,a.in_entity_name) as in_entity_name
         , coalesce(b.out_entity_name,a.out_entity_name) as out_entity_name
-        , PUT(coalesce(b.in_entity_name,a.in_entity_name),$unqEntity.) as unq_in_entity_name
-        , PUT(coalesce(b.out_entity_name,a.out_entity_name),$unqEntity.) as unq_out_entity_name
+        , PUT(coalesce(b.in_entity_name,a.in_entity_name),$unqEntity.) as unq_in_entity_name length=210
+        , PUT(coalesce(b.out_entity_name,a.out_entity_name),$unqEntity.) as unq_out_entity_name length=210
 
       FROM work.impExp_flow2(WHERE=(step IN (&l_impExpSteps))) AS a
       FULL join work.impExp_flow2(WHERE=(step IN (&l_dataSteps))) AS b
@@ -606,9 +483,10 @@
 
   DATA work.single_line_dag (KEEP=step step_name ins outs in_entities out_entities unq_in_entities unq_out_entities);
     if (0) then SET work.steps_in_out_flow;
-    LENGTH 
-      ins outs $4000 
-      in_entities out_entities unq_in_entities unq_out_entities $8000;
+    /* Wide enough that steps with many inputs/outputs are not silently truncated */
+    LENGTH
+      ins outs
+      in_entities out_entities unq_in_entities unq_out_entities $32767;
 
     DO UNTIL (last.step);
       SET work.steps_in_out_flow;
@@ -623,16 +501,34 @@
     OUTPUT;
   RUN;
 
+  %if (%superq(l_outJsonFileName) NE ) %then
+  %do;
+    /* Keep the per-step entity links for the JSON writer (steps_in_out_flow is deleted below) */
+    PROC SQL;
+      CREATE TABLE work.pscp_stepio AS
+      SELECT DISTINCT step, unq_in_entity_name, unq_out_entity_name
+      FROM work.steps_in_out_flow;
+    QUIT;
+  %end;
+
   PROC DELETE DATA=work.STEPS_IN_OUT_FLOW; RUN;
+
+%MEND pscp_buildFlow;
+
+/**
+  @brief Stage 4: adds run-time durations to the stepname. format (p_includeSteps_yn=Y).
+  @details Internal helper of %util_parseScaproc. Shares the caller's %LOCAL macro variables
+  (l_*) and the WORK tables created by the preceding stages.
+**/
+%MACRO pscp_addRuntimes;
 
   %if (&l_includeSteps_yn = Y) %then
   %do;
     /* Calculate steps run-time duration */
+    /* Each step ends when the next recorded step starts (one-to-one merge, offset by one row) */
     DATA work.step_runtimes2;
-     if (eof=0) then set work.step_runtimes(firstobs=2 keep=step_start_dt rename=(step_start_dt=step_end_dt)) end=eof;
-     else step_end_dt=.;
-     
-     SET work.step_runtimes;
+     MERGE work.step_runtimes
+           work.step_runtimes(firstobs=2 keep=step_start_dt rename=(step_start_dt=step_end_dt));
     LENGTH runTime_duration 8;
     FORMAT runTime_duration time12.2;
 
@@ -647,7 +543,7 @@
      SELECT 
     	a.step
      	, a.fmtname
-     	, CAT('_',PUT(a.step,&l_stepFmt.),'_',STRIP(a.step_name),' (',STRIP(PUT(b.runtime_duration,time12.2)),')') as step_name LENGTH=30
+     	, CAT('_',PUT(a.step,&l_stepFmt.),'_',STRIP(a.step_name),' (',STRIP(PUT(b.runtime_duration,time12.2)),')') as step_name LENGTH=60
      	, a.type
      FROM work.step_names a
      INNER JOIN work.step_runtimes2 b 
@@ -660,18 +556,187 @@
     PROC FORMAT CNTLIN=work.step_names2(RENAME=(step=start step_name=label));
     RUN;
 
-    /* Clean-up */
-    PROC DATASETS lib=work nolist;
-     DELETE step_names: step_runtimes:; 
-    QUIT; RUN;
   %end; /* End - (&l_includeSteps_yn = Y) */
+
+  /* Clean-up */
+  PROC DATASETS lib=work nolist;
+   DELETE step_names: step_runtimes:;
+  QUIT; RUN;
+
+%MEND pscp_addRuntimes;
+
+/**
+  @brief Expression (for use in a DATA step) that JSON-escapes a character value.
+  @param [in] p_val= character expression
+**/
+%MACRO pscp_jsonEsc(p_val);
+  tranwrd(tranwrd(strip(&p_val),'\','\\'),'"','\"')
+%MEND pscp_jsonEsc;
+
+/**
+  @brief Stage 4b: writes the data flow as a node/edge JSON graph (p_outJsonFileName=).
+  @details Internal helper of %util_parseScaproc. Runs after pscp_addRuntimes and before pscp_writeDot,
+  while in_out_info_flow, unique_in_out_entities, pscp_stepio and the $unqEntity./stepname. formats exist.
+**/
+%MACRO pscp_writeJson;
+
+  %LOCAL l_jsonPath;
+  %let l_jsonPath = &l_outDotFilePath/&l_outJsonFileName;
+
+  PROC SQL;
+    /* Data set and external-file nodes (one per unique entity) */
+    CREATE TABLE work.pscp_json_nodes AS
+    SELECT DISTINCT ent.entity_name AS id LENGTH=210
+      , CASE WHEN STRIP(flow.dsname) = '' AND STRIP(flow.filename) NE ''
+             THEN STRIP(flow.filename) ELSE STRIP(flow.dsname) END AS label LENGTH=210
+      , CASE WHEN STRIP(flow.dsname) = '' AND STRIP(flow.filename) NE ''
+             THEN 'file' ELSE 'dataset' END AS type LENGTH=10
+      , . AS step
+    FROM work.in_out_info_flow AS flow
+    INNER JOIN work.unique_in_out_entities AS ent
+    ON PUT(flow.entity_name,$unqEntity.) = ent.entity_name AND ent.entity_name IS NOT NULL;
+
+  %if (&l_includeAttrs_yn EQ Y) %then
+  %do;
+    /* Column lists, in order of first appearance */
+    CREATE TABLE work.pscp_json_cols AS
+    SELECT ent.entity_name AS id LENGTH=210
+      , STRIP(flow.variable) AS name LENGTH=32
+      , STRIP(flow.type) AS coltype LENGTH=15
+      , MIN(flow.sca_linenum) AS seq
+    FROM work.in_out_info_flow AS flow
+    INNER JOIN work.unique_in_out_entities AS ent
+    ON PUT(flow.entity_name,$unqEntity.) = ent.entity_name AND ent.entity_name IS NOT NULL
+    WHERE STRIP(flow.dsname) NE '' AND STRIP(flow.variable) NE ''
+    GROUP BY 1, 2, 3
+    ORDER BY 1, 4;
+  %end;
+  %else
+  %do;
+    CREATE TABLE work.pscp_json_cols
+      (id CHAR(210), name CHAR(32), coltype CHAR(15), seq NUM);
+  %end;
+
+  %if (&l_includeSteps_yn EQ Y) %then
+  %do;
+    /* Step nodes, and edges input -> step -> output */
+    INSERT INTO work.pscp_json_nodes (id, label, type, step)
+    SELECT DISTINCT PUT(step,stepname.), STRIP(SCAN(PUT(step,stepname.),2,'_')), 'step', step
+    FROM work.pscp_stepio;
+
+    CREATE TABLE work.pscp_json_edges AS
+    SELECT DISTINCT unq_in_entity_name AS source LENGTH=210, PUT(step,stepname.) AS target LENGTH=210
+      , 'input' AS kind LENGTH=10
+    FROM work.pscp_stepio WHERE unq_in_entity_name NE ''
+    UNION
+    SELECT DISTINCT PUT(step,stepname.), unq_out_entity_name, 'output'
+    FROM work.pscp_stepio WHERE unq_out_entity_name NE '';
+  %end;
+  %else
+  %do;
+    /* No step nodes: link inputs directly to outputs */
+    CREATE TABLE work.pscp_json_edges AS
+    SELECT DISTINCT a.unq_in_entity_name AS source LENGTH=210, b.unq_out_entity_name AS target LENGTH=210
+      , 'flow' AS kind LENGTH=10
+    FROM work.pscp_stepio AS a INNER JOIN work.pscp_stepio AS b ON a.step = b.step
+    WHERE a.unq_in_entity_name NE '' AND b.unq_out_entity_name NE '';
+  %end;
+  QUIT;
+
+  PROC SORT DATA=work.pscp_json_nodes; BY id; RUN;
+  DATA work.pscp_json_nodes;   /* one node per id */
+    SET work.pscp_json_nodes;
+    BY id;
+    IF (first.id);
+  RUN;
+  PROC SORT DATA=work.pscp_json_cols;  BY id seq; RUN;
+  PROC SORT DATA=work.pscp_json_edges; BY source target kind; RUN;
+
+  /* Header */
+  DATA _NULL_;
+    FILE "&l_jsonPath" LRECL=32767;
+    LENGTH line $32767;
+    PUT '{';
+    line = CATS('"generator": "util_parseScaproc", "source": "', %pscp_jsonEsc("&l_inScaprocFileName"), '", "directed": true,');
+    PUT line;
+    PUT '"nodes": [';
+  RUN;
+
+  /* Nodes, each with its optional column list */
+  DATA _NULL_;
+    FILE "&l_jsonPath" LRECL=32767 MOD;
+    MERGE work.pscp_json_nodes(IN=isNode) work.pscp_json_cols;
+    BY id;
+    IF (NOT isNode) THEN DELETE;
+    LENGTH line $32767;
+    RETAIN nodeCnt 0 colCnt 0 hasCols 0;
+
+    IF (first.id) THEN
+    DO;
+      line = CATS(IFC(nodeCnt > 0, ',', ' '), '{"id": "', %pscp_jsonEsc(id), '", "label": "', %pscp_jsonEsc(label)
+                 , '", "type": "', type, '"');
+      IF (step NE .) THEN line = CATS(line, ', "step": ', step);
+      hasCols = (name NE '');
+      colCnt  = 0;
+      IF (hasCols) THEN line = CATS(line, ', "columns": [');
+      nodeCnt + 1;
+      PUT line;
+    END;
+
+    IF (name NE '') THEN
+    DO;
+      line = CATS(IFC(colCnt > 0, ',', ' '), '{"name": "', %pscp_jsonEsc(name), '", "type": "', %pscp_jsonEsc(coltype), '"}');
+      PUT '  ' line;
+      colCnt + 1;
+    END;
+
+    IF (last.id) THEN
+    DO;
+      IF (hasCols) THEN PUT ']';
+      PUT '}';
+    END;
+  RUN;
+
+  DATA _NULL_;
+    FILE "&l_jsonPath" LRECL=32767 MOD;
+    PUT '],';
+    PUT '"edges": [';
+  RUN;
+
+  /* Edges */
+  DATA _NULL_;
+    FILE "&l_jsonPath" LRECL=32767 MOD;
+    SET work.pscp_json_edges;
+    LENGTH line $32767;
+    line = CATS(IFC(_n_ > 1, ',', ' '), '{"source": "', %pscp_jsonEsc(source), '", "target": "', %pscp_jsonEsc(target)
+               , '", "type": "', kind, '"}');
+    PUT line;
+  RUN;
+
+  DATA _NULL_;
+    FILE "&l_jsonPath" LRECL=32767 MOD;
+    PUT ']';
+    PUT '}';
+  RUN;
+
+%MEND pscp_writeJson;
+
+/**
+  @brief Stage 5: composes the DOT directives and writes the .dot file and output data set.
+  @details Internal helper of %util_parseScaproc. Shares the caller's %LOCAL macro variables
+  (l_*) and the WORK tables created by the preceding stages.
+**/
+%MACRO pscp_writeDot;
+
+  %if (&l_outDot_yn = Y) %then
+  %do;
 
   * ---------------;
   * Create .DOT directives to make a diagram ;
   * ---------------;
   * First: Produce header lines;
   DATA work._flow_start_ ;
-    LENGTH line $6000;
+    LENGTH line $32767;
 
     line="// Generated by SAS for &l_inScaprocFileName" ;
     OUTPUT ;
@@ -712,7 +777,7 @@
   %end; /* End - (&l_includeAttrs_yn EQ Y) */
         /* External File */
         WHEN (STRIP(flow.dsname) eq '' AND STRIP(flow.filename) ne '') THEN
-          '"'||STRIP(PUT(flow.entity_name,$unqEntity.))||'" [ shape="note" label="'|| STRIP(flow.filename)||'" color=lightgreen style=filled ]'
+          '"'||STRIP(PUT(flow.entity_name,$unqEntity.))||'" [ shape="note" label="'|| STRIP(TRANWRD(flow.filename,'\','\\'))||'" color=lightgreen style=filled ]'
         /* Data set */
         /*WHEN (STRIP(flow.dsname) ne '' AND STRIP(flow.filename) eq '') THEN*/
         ELSE
@@ -744,7 +809,7 @@
  
   /* Write out the Dag */
 	DATA work._flow_dag_(KEEP=line) ;
-		LENGTH line $6000 step_name $30;
+		LENGTH line $32767 step_name $60;
     SET work.single_line_dag;
     BY step;
 
@@ -788,14 +853,15 @@
   
   * Last: Produce closing lines;
   DATA work._flow_end_ ;
-    LENGTH line $6000;
+    LENGTH line $32767;
     line= '}' ;
     OUTPUT ;
   RUN;
 
-  DATA &p_outDsName;
-    FILE "&l_outDotFilePath/&l_outDotFileName" lRECL=6000;
-    SET work._flow_start_ 
+  DATA &l_outDsName(COMPRESS=YES);
+    FILE "&l_outDotFilePath/&l_outDotFileName" lRECL=32767;
+    LENGTH line $32767;
+    SET work._flow_start_
       work._flow_attrs_
       work._flow_dag_
     	work._flow_end_;
@@ -804,13 +870,267 @@
     PUT line;
   RUN;
 
+  %end; /* End - (&l_outDot_yn = Y) */
+
   /* Clean-up */
-  PROC DATASETS LIB=WORK NOLIST;
-    DELETE _flow_: in_out_info_flow single_line_dag unique_in_out_entities unqEntity_fmtds;
+  PROC DATASETS LIB=WORK NOLIST NOWARN;
+    DELETE _flow_: in_out_info_flow single_line_dag unique_in_out_entities unqEntity_fmtds pscp_:;
   RUN; QUIT;
 
-  /* Terminate the collection and close the output file */
-  %util_termScaproc(p_enableFlagName=g_enableScaProc)
+%MEND pscp_writeDot;
+
+/**
+  @file util_parsescaproc.sas
+  @brief Parses out the output generated SAS Code Analyzer.
+  @details Parses out the output generated SAS Code Analyzer,
+  and generated *.dot output file, that could be rendered by any
+  Graphviz (https://www.graphviz.org/) Viewer/Renderer be it
+    - Web Viewer: http://webgraphviz.com/
+    - VS Code extension: Graphviz (dot) language support for Visual Studio Code
+      (https://marketplace.visualstudio.com/items?itemName=joaompinto.vscode-graphviz)
+
+  The inspiration for this code originted from
+    - Code presented in
+      "Automatically create diagrams showing the structure and performance of your SAS code"
+      https://support.sas.com/resources/papers/proceedings17/1104-2017.pdf
+      https://github.com/philipmason/Wood-Street-Consultants/tree/main/SCAPROC/SAS
+    - Code presented in
+      "SCAPROC Impact Analysis - Providing QA and Compliance Insights"
+      https://www.lexjansen.com/phuse/2016/tt/TT02.pdf
+      Sample 58878: SAS® Life Science Analytics Framework - 
+      SCAPROC Impact Analysis: Providing QA and Compliance Insights
+      https://support.sas.com/kb/58/878.html
+      https://support.sas.com/kb/58/047.html
+    - Code presented in
+      "QA and Compliance Insights Using the SCAPROC Procedure"
+      https://www.pharmasug.org/proceedings/2016/MS/PharmaSUG-2016-MS04.pdf
+    - SASjs generated lineage documentation
+      https://cli.sasjs.io/doc/
+      https://www.youtube.com/watch?v=Sb1DqTLgVyQ&t=182s
+      https://www.youtube.com/watch?v=9ea9vn7YmfM
+ 
+  Example usage:
+  
+      %util_parseScaproc(p_inScaprocFileName=
+      , p_outDotFilePath=%sysfunc(pathname(WORK))
+      , p_outDotFileName=mydigraph.dot
+      , p_outDsName=work.mydigraph
+      , p_includeAttrs_yn=Y, p_includeSteps_yn=Y)
+
+  @param [in] p_inScaprocFileName= The name of the SAS Code Analysis recording file. Required.
+  @param [in] p_outDotFilePath= The GRAPHVIZ (*.dot) output file path. Required. 
+                                Default: %sysfunc(pathname(WORK)).
+  @param [in] p_outDotFileName= The GRAPHVIZ (*.dot) output file name. Required.
+                                Default: mydigraph.dot
+  @param [in] p_outDsName= The output data set name of the parsing results. Optional.
+  @param [in] p_includeAttrs_yn= A Y/N flag to include table columns in the output. Default:Y.
+  @param [in] p_includeSteps_yn= A Y/N flag to include processing steps and elapse times in the output. 
+                                 Default:Y.
+  @param [in] p_rankDir= Sets direction of graph layout. Valid Values:TB|BT|LR|RL.
+                         Default:TB. Forced to LR when p_includeAttrs_yn=Y.
+  @param [in] p_outJsonFileName= Optional. When specified, a JSON graph is also written to
+                                 p_outDotFilePath/p_outJsonFileName, so that any graphing tool
+                                 (D3, Cytoscape, vis.js, networkx, ...) can render the DAG:
+
+                                     { "generator": "util_parseScaproc", "source": "<sca file>", "directed": true,
+                                       "nodes": [ { "id", "label", "type": "dataset|file|step",
+                                                    "columns": [ { "name", "type" } ],   (datasets, p_includeAttrs_yn=Y)
+                                                    "step": <n> } ],                     (steps)
+                                       "edges": [ { "source", "target", "type": "input|output|flow" } ] }
+
+                                 Step nodes and input/output edges are included when p_includeSteps_yn=Y;
+                                 otherwise edges link inputs directly to outputs (type "flow").
+                                 Column lists follow p_includeAttrs_yn.
+
+  @param [in] p_outDot_yn= A Y/N flag to write the GRAPHVIZ (*.dot) file and the p_outDsName data set.
+                           Set to N when only the JSON graph is needed; p_outJsonFileName is then
+                           required (rc 4 otherwise). Default:Y.
+
+  @return Global macro variable g_parseScaprocRC: 0 on success, non-zero on a validation error.
+
+  @param [in] p_debug= A Y/N flag to print diagnostic messages to the log. Default:N.
+
+  @n[util_parseScaproc Flow Diagram](../diagrams/util_parseScaproc.svg)
+
+  @version 9.4
+  @author Ahmed Al-Attar
+
+**/
+
+%MACRO util_parseScaproc(p_inScaprocFileName=
+, p_outDotFilePath=%sysfunc(pathname(WORK))
+, p_outDotFileName=mydigraph.dot
+, p_outDsName=
+, p_includeAttrs_yn=Y
+, p_includeSteps_yn=Y
+, p_rankDir=TB
+, p_debug=N
+, p_outJsonFileName=
+, p_outDot_yn=Y) / minoperator;
+
+  %LOCAL
+    l_eTime
+    l_MSG
+    l_RC
+    l_rTime
+    l_sTime
+    ;
+
+  %LOCAL
+    l_inScaprocFileName
+    l_scaprocFileName
+    l_debug
+    l_ei
+    l_impExpStep
+    l_dataStep
+    l_logsRoot
+    l_outJsonFileName
+    l_outDot_yn
+    l_outDotFilePath
+    l_outDotFileName
+    l_outDsName
+    l_stepFmt
+    l_includeAttrs_yn
+    l_includeSteps_yn
+    l_rankDir
+    l_impExpSteps
+    l_dataSteps
+    l_impExpStepsCnt
+    l_impExpStepsExclude
+    l_stepsCount
+    l_concatLibObsCount
+    ;
+
+  %let l_sTime=%sysfunc(time());
+
+  /* Return code for callers/tests: 0 = success, non-zero = validation failure */
+  %if (NOT %symexist(g_parseScaprocRC)) %then %global g_parseScaprocRC;
+  %let l_rc = 0;
+  %let g_parseScaprocRC = 0;
+
+  /* Initialize the collection and open the output file */
+  /* Named scaparse__ (not sca__) so the usage program's sca__*.txt glob never picks it up */
+  %let l_logsRoot = %sysfunc(pathname(WORK));
+  %if (%symexist(g_logsRoot)) %then %let l_logsRoot = &g_logsRoot;
+  %util_initScaproc(p_enableFlagName=g_enableScaProc
+  , p_outFilePath=%str(&l_logsRoot)
+  , p_outFileName=scaparse__util_parseScaproc.txt);
+
+  %let l_debug = %upcase(%superq(p_debug));
+
+  /********** BEGIN -- Macro Parameter Validation **********/
+  /* Check if the p_inScaprocFileName is specified or not */
+  %if (%superq(p_inScaprocFileName) EQ ) %then 
+  %do;
+    %let l_rc  = 1;
+    %let l_msg = ERROR: util_parseScaproc: p_inScaprocFileName is invalid. Please specify non-missing value;
+    %goto exit;
+  %end;
+  %else 
+  %do;
+    /* Convert \ to / for supplied parameter paths */
+    %let l_inScaprocFileName = %sysfunc(translate(&p_inScaprocFileName,%str(/),%str(\)));
+
+    %if (%sysfunc(fileexist(&l_inScaprocFileName)) EQ 1) %then 
+    %do;
+      %let l_scaprocFileName = %scan(&l_inScaprocFileName,-1,%str(/));
+      %if (&l_debug = Y) %then %put &=l_scaprocFileName;
+    %end;
+    %else 
+    %do;
+      %let l_rc  = 2;
+      %let l_msg = ERROR: util_parseScaproc: p_inScaprocFileName is invalid. Please specify an existing file;
+      %goto exit;
+    %end;
+  %end;
+
+  /* Set Defaults */
+  %let l_outDotFilePath = &p_outDotFilePath;
+  %if (%superq(l_outDotFilePath) EQ ) %then
+    %let l_outDotFilePath = %sysfunc(pathname(WORK));
+  %else
+    %let l_outDotFilePath = %sysfunc(translate(&l_outDotFilePath,%str(/),%str(\)));
+
+  /* Fail fast on a bad output folder, before doing any work */
+  %if (%sysfunc(fileexist(&l_outDotFilePath)) EQ 0) %then
+  %do;
+    %let l_rc  = 3;
+    %let l_msg = ERROR: util_parseScaproc: p_outDotFilePath does not exist: &l_outDotFilePath;
+    %goto exit;
+  %end;
+
+  %let l_outJsonFileName = %superq(p_outJsonFileName);
+
+  %let l_outDot_yn = Y;
+  %if (%superq(p_outDot_yn) NE ) %then
+    %let l_outDot_yn = %upcase(&p_outDot_yn);
+  %if (&l_outDot_yn NE Y AND %superq(l_outJsonFileName) EQ ) %then
+  %do;
+    %let l_rc  = 4;
+    %let l_msg = ERROR: util_parseScaproc: p_outDot_yn=N requires p_outJsonFileName (nothing would be written);
+    %goto exit;
+  %end;
+
+  %let l_outDotFileName = &p_outDotFileName;
+  %if (%superq(l_outDotFileName) EQ ) %then
+    %let l_outDotFileName = mydigraph.dot;
+
+  %let l_outDsName = &p_outDsName;
+  %if (%superq(l_outDsName) EQ ) %then
+    %let l_outDsName=work.mydigraph;
+
+  %let l_includeAttrs_yn = Y;
+  %if (%superq(p_includeAttrs_yn) NE ) %then
+    %let l_includeAttrs_yn = %upcase(&p_includeAttrs_yn);
+
+  %let l_includeSteps_yn = Y;
+  %if (%superq(p_includeSteps_yn) NE ) %then
+    %let l_includeSteps_yn = %upcase(&p_includeSteps_yn);
+
+  %let l_rankDir = TB;
+  %if (%superq(p_rankDir) NE ) %then
+    %let l_rankDir = %upcase(&p_rankDir);
+  %if NOT (&l_rankDir IN (TB BT LR RL)) %then
+  %do;
+    %PUT WARNING: Acceptable p_rankDir values: TB|BT|LR|RL. Defaulting to: TB;
+    %let l_rankDir = TB;
+  %end;
+
+  /* Set the direction to LR when the columns attributes in included */
+  %if (&l_includeAttrs_yn = Y) %then
+    %let l_rankDir = LR;
+
+  /********** END -- Macro Parameter Validation **********/
+  %let l_concatLibObsCount = 0;
+
+  /* Stage 1: read the recording */
+  %pscp_readRecording
+
+  /* Stage 2: extract inputs, outputs, step names and run-times */
+  %pscp_extractIO
+
+  /* Stage 3: build the entity lookup and per-step data flow */
+  %pscp_buildFlow
+
+  /* Stage 4: add run-time durations to the step names */
+  %pscp_addRuntimes
+
+  /* Stage 5: write the optional JSON graph, then the .dot file (which cleans up the shared tables) */
+  %if (%superq(l_outJsonFileName) NE ) %then
+  %do;
+    %pscp_writeJson
+  %end;
+  %pscp_writeDot
+
+  /* Remove the work formats created by this run so they can't leak into the next call */
+  PROC CATALOG CAT=work.formats;
+    DELETE unqEntity / ENTRYTYPE=FORMATC;
+  %if (&l_concatLibObsCount GT 0) %then
+  %do;
+    DELETE cncatlibs / ENTRYTYPE=FORMATC;
+  %end;
+    DELETE stepname  / ENTRYTYPE=FORMAT;
+  RUN; QUIT;
 
   %goto finished;
 
@@ -822,6 +1142,10 @@
     %PUT *** ERROR: util_parseScaproc  ***;
 
   %finished:
+    /* Always terminate the collection (success or error), so PROC SCAPROC is never left recording */
+    %util_termScaproc(p_enableFlagName=g_enableScaProc)
+
+    %let g_parseScaprocRC = &l_rc;
     %let l_eTime=%sysfunc(time());
     %let l_rTime=%sysfunc(putn(%sysevalf(&l_eTime - &l_sTime),time12.2));
     %PUT >>> util_parseScaproc :>>> Total RunTime = &l_rTime;

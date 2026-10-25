@@ -1,0 +1,62 @@
+/**
+  @file test_framework.sas
+  @brief Minimal assertion helpers for the SCA parser tests.
+  @details Every assertion prints exactly one line to the log, starting with
+  TEST_PASS: or TEST_FAIL:, which tests/run_tests.py collects.
+**/
+
+/* Print a PASS/FAIL line. p_cond must be a macro-evaluable expression. */
+%macro t_assert(p_name=, p_cond=);
+  %if (&p_cond) %then %put TEST_PASS: &p_name;
+  %else %put TEST_FAIL: &p_name (condition: &p_cond);
+%mend t_assert;
+
+/* Delete the files (not sub-folders) in a scratch folder, so stale output can't make a test pass or fail */
+%macro t_cleanDir(p_dir=);
+  DATA _NULL_;
+    LENGTH fref f2 $8 fn $256;
+    rc = FILENAME(fref, "&p_dir");
+    did = DOPEN(fref);
+    if (did > 0) then
+    do;
+      do i = 1 to DNUM(did);
+        fn = DREAD(did, i);
+        /* never delete the test programs themselves */
+        if (LOWCASE(SCAN(fn,-1,'.')) = 'sas') then continue;
+        rc = FILENAME(f2, CATX('/', "&p_dir", fn));
+        if (rc = 0) then
+        do;
+          rc = FDELETE(f2);   /* folders are non-empty or fail silently here */
+          rc = FILENAME(f2);
+        end;
+      end;
+      rc = DCLOSE(did);
+    end;
+    rc = FILENAME(fref);
+  RUN;
+%mend t_cleanDir;
+
+/* Count regex matches (Perl syntax, no parentheses) across all lines of a file into a macro variable */
+%macro t_countRegex(p_file=, p_regex=, p_outVar=);
+  %global &p_outVar;
+  %let &p_outVar = 0;
+  %if (%sysfunc(fileexist(&p_file)) = 0) %then %return;
+  DATA _NULL_;
+    INFILE "&p_file" LRECL=32767 END=eof;
+    INPUT;
+    RETAIN n 0 rx;
+    if (_n_ = 1) then rx = PRXPARSE("/&p_regex/");
+    start = 1;
+    stop  = LENGTHN(_INFILE_);
+    if (stop > 0) then
+    do;
+      CALL PRXNEXT(rx, start, stop, _INFILE_, pos, len);
+      do while (pos > 0);
+        n + 1;
+        CALL PRXNEXT(rx, start, stop, _INFILE_, pos, len);
+      end;
+    end;
+    if (eof) then CALL SYMPUTX("&p_outVar", n);
+  RUN;
+%mend t_countRegex;
+
