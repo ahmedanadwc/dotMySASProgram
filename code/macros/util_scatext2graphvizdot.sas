@@ -26,6 +26,8 @@
                             *.dot file, named after the input file with a .json extension. Default:N.
   @param [in] p_outDot_yn= A Y/N flag to write the *.dot files. Set to N for JSON-only output
                            (requires p_outJson_yn=Y). Default:Y.
+  @param [in] p_dotTheme= The format of the *.dot files. Valid Values:DEFAULT|SIMPLE (see %util_parseScaproc).
+                          Default:DEFAULT.
 
   @version 9.4
   @author Ahmed Al-Attar
@@ -39,7 +41,8 @@
 , p_includeSteps_yn=Y
 , p_rankDir=TB
 , p_outJson_yn=N
-, p_outDot_yn=Y) / minoperator;
+, p_outDot_yn=Y
+, p_dotTheme=DEFAULT) / minoperator;
   
 	%LOCAL  
 		l_eTime
@@ -55,6 +58,7 @@
 		l_includeSteps_yn
 		l_outJson_yn
 		l_outDot_yn
+		l_dotTheme
 		l_rankDir
     ;
 
@@ -99,6 +103,10 @@
 	%let l_outJson_yn = N;
 	%if (%superq(p_outJson_yn) NE ) %then
 		%let l_outJson_yn = %upcase(&p_outJson_yn);
+
+	%let l_dotTheme = DEFAULT;
+	%if (%superq(p_dotTheme) NE ) %then
+		%let l_dotTheme = %upcase(&p_dotTheme);
 
 	%let l_outDot_yn = Y;
 	%if (%superq(p_outDot_yn) NE ) %then
@@ -153,7 +161,7 @@
 		PUT ", p_outDotFilePath=%nrstr(&p_outDotFilesDir)";
 		PUT ', p_outDotFileName=%nrstr(' NEW_NAME +(-1) ')';
 		PUT ', p_outDsName=' DS_NAME;
-		PUT ", p_includeAttrs_yn=&l_includeAttrs_yn, p_outDot_yn=&l_outDot_yn";
+		PUT ", p_includeAttrs_yn=&l_includeAttrs_yn, p_outDot_yn=&l_outDot_yn, p_dotTheme=&l_dotTheme";
 	%if (&l_outJson_yn = Y) %then
 	%do;
 		PUT ", p_includeSteps_yn=&l_includeSteps_yn, p_rankDir=&l_rankDir";

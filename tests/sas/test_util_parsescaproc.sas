@@ -297,4 +297,64 @@ LIBNAME tj CLEAR;
 %t_assert(p_name=T14 json written, p_cond=%sysfunc(fileexist(&g_testRoot/jsononly/sca__txt_many.v2.json)) = 1)
 %t_assert(p_name=T14 no dot written, p_cond=%sysfunc(fileexist(&g_testRoot/jsononly/sca__txt_many.v2.dot)) = 0)
 
+/* ------------------------------------------------------------------
+   T15: SIMPLE theme (attrs=Y, steps=Y)
+------------------------------------------------------------------- */
+%util_parseScaproc(p_inScaprocFileName=%str(&g_testRoot/sca__basic.txt)
+, p_outDotFilePath=%str(&g_testRoot), p_outDotFileName=t15.dot, p_dotTheme=simple)
+
+%t_assert(p_name=T15 return code is 0, p_cond=&g_parseScaprocRC = 0)
+%t_countRegex(p_file=&g_testRoot/t15.dot, p_regex=^node \[, p_outVar=c)
+%t_assert(p_name=T15 no global node defaults line, p_cond=&c = 0)
+%t_countRegex(p_file=&g_testRoot/t15.dot, p_regex=^digraph dag \{, p_outVar=c)
+%t_assert(p_name=T15 has digraph header, p_cond=&c = 1)
+%t_countRegex(p_file=&g_testRoot/t15.dot, p_regex=^\x22[^\x22]+\x22 -> \x22[^\x22]+\x22$, p_outVar=c)
+%t_assert(p_name=T15 one quoted source -> target statement per edge, p_cond=&c ge 6)
+%t_countRegex(p_file=&g_testRoot/t15.dot, p_regex=\{\x22, p_outVar=c)
+%t_assert(p_name=T15 no grouped {a b} edge syntax, p_cond=&c = 0)
+%t_countRegex(p_file=&g_testRoot/t15.dot, p_regex=shape=\x22oval\x22 label=.* color=yellow style=filled, p_outVar=c)
+%t_assert(p_name=T15 step ovals (yellow, filled), p_cond=&c ge 3)
+%t_countRegex(p_file=&g_testRoot/t15.dot, p_regex=\[shape=table color=lightblue style=filled label=\x3C\x3CTABLE, p_outVar=c)
+%t_assert(p_name=T15 data set nodes are explicit HTML-label tables, p_cond=&c ge 3)
+%t_countRegex(p_file=&g_testRoot/t15.dot, p_regex=shape=\x22note\x22.*color=lightgreen style=filled, p_outVar=c)
+%t_assert(p_name=T15 external files are green notes, p_cond=&c ge 1)
+%t_countRegex(p_file=&g_testRoot/t15.dot, p_regex=^\x3C\x2FTABLE>>, p_outVar=c)
+%t_assert(p_name=T15 every table node is closed, p_cond=&c ge 3)
+%t_dotDangling(p_file=&g_testRoot/t15.dot, p_outVar=c)
+%t_assert(p_name=T15 every edge endpoint has a node definition, p_cond=&c = 0)
+
+/* T15b: SIMPLE theme, no attributes / steps */
+%util_parseScaproc(p_inScaprocFileName=%str(&g_testRoot/sca__basic.txt)
+, p_outDotFilePath=%str(&g_testRoot), p_outDotFileName=t15b.dot
+, p_includeAttrs_yn=N, p_includeSteps_yn=N, p_dotTheme=SIMPLE)
+%t_countRegex(p_file=&g_testRoot/t15b.dot, p_regex=^\x22[^\x22]+\x22 -> \x22[^\x22]+\x22$, p_outVar=c)
+%t_assert(p_name=T15b direct data flow edges, p_cond=&c ge 2)
+%t_countRegex(p_file=&g_testRoot/t15b.dot, p_regex=\[shape=cylinder color=lightblue style=filled , p_outVar=c)
+%t_assert(p_name=T15b data sets are explicit cylinders, p_cond=&c ge 3)
+%t_countRegex(p_file=&g_testRoot/t15b.dot, p_regex=shape=\x22oval\x22, p_outVar=c)
+%t_assert(p_name=T15b no step ovals, p_cond=&c = 0)
+%t_dotDangling(p_file=&g_testRoot/t15b.dot, p_outVar=c)
+%t_assert(p_name=T15b every edge endpoint has a node definition, p_cond=&c = 0)
+
+/* ------------------------------------------------------------------
+   T16: DEFAULT theme is unchanged; an unknown theme falls back to it
+------------------------------------------------------------------- */
+%util_parseScaproc(p_inScaprocFileName=%str(&g_testRoot/sca__basic.txt)
+, p_outDotFilePath=%str(&g_testRoot), p_outDotFileName=t16.dot, p_dotTheme=fancy)
+%t_countRegex(p_file=&g_testRoot/t16.dot, p_regex=^node \[shape=table, p_outVar=c)
+%t_assert(p_name=T16 unknown theme falls back to DEFAULT node line, p_cond=&c = 1)
+%t_countRegex(p_file=&g_testRoot/t16.dot, p_regex=\} -> \{, p_outVar=c)
+%t_assert(p_name=T16 DEFAULT keeps grouped edge syntax, p_cond=&c ge 4)
+
+/* ------------------------------------------------------------------
+   T17: mass conversion passes the theme through
+------------------------------------------------------------------- */
+%let g_rc = %sysfunc(dcreate(simple,&g_testRoot));
+%t_cleanDir(p_dir=&g_testRoot/simple)
+%util_scaText2graphvizDot(p_inTxtFileList=&g_testRoot/list.txt
+, p_outDotFilesDir=&g_testRoot/simple, p_includeAttrs_yn=N, p_dotTheme=SIMPLE)
+%t_assert(p_name=T17 themed dot written, p_cond=%sysfunc(fileexist(&g_testRoot/simple/sca__txt_many.v2.dot)) = 1)
+%t_countRegex(p_file=&g_testRoot/simple/sca__txt_many.v2.dot, p_regex=^node \[, p_outVar=c)
+%t_assert(p_name=T17 SIMPLE theme applied by mass conversion, p_cond=&c = 0)
+
 %put TEST_DONE;

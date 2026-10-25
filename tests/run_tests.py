@@ -60,7 +60,8 @@ def main() -> int:
     passed = re.findall(r"^TEST_PASS: (.+)$", log, re.M)
     failed = re.findall(r"^TEST_FAIL: (.+)$", log, re.M)
     # T3 deliberately passes an invalid p_rankDir and expects this one warning
-    expected = re.compile(r"WARNING: Acceptable p_rankDir values")
+    # (T3 passes an invalid p_rankDir, T16 an invalid p_dotTheme)
+    expected = re.compile(r"WARNING: Acceptable p_(rankDir|dotTheme) values")
     problems = [
         l for l in log.splitlines()
         if re.match(r"(ERROR|WARNING)\b", l) and not expected.search(l)
