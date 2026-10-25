@@ -18,7 +18,8 @@
   @param [in] p_enableFlagName= The name of the macro variable flag to enable SAS Code Analysis logging.
   @param [in] p_outFilePath= The output path for storing the output recording file.
   @param [in] p_outFileName= The name of the output recording file.
-  @param [in] p_options= SAS macro variable name to hold the returned value. Required.
+  @param [in] p_options= PROC SCAPROC RECORD statement options.
+                          Default: ATTR OPENTIMES EXPANDMACROS.
 
   @version 9.4
   @author Ahmed Al-Attar

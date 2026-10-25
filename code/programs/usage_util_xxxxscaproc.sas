@@ -13,6 +13,22 @@
 
 **/
 
+/**
+ * Paths are derived from one root. Set g_projectRoot (or g_logsRoot/g_outputRoot/g_dataRoot)
+ * before running this program to relocate everything; the default is
+ * <home directory>/dotMySASProgram, which works on Linux and Windows.
+*/
+%GLOBAL g_projectRoot g_logsRoot g_outputRoot g_dataRoot g_enableScaProc;
+%macro usage_setPaths;
+	%if (%superq(g_projectRoot) EQ ) %then
+		%let g_projectRoot = %sysfunc(translate(%sysfunc(sysget(HOME))/dotMySASProgram,/,\));
+	%if (%superq(g_logsRoot) EQ )   %then %let g_logsRoot   = &g_projectRoot/logs;
+	%if (%superq(g_outputRoot) EQ ) %then %let g_outputRoot = &g_projectRoot/output;
+	%if (%superq(g_dataRoot) EQ )   %then %let g_dataRoot   = &g_projectRoot/data;
+	%if (%superq(g_enableScaProc) EQ ) %then %let g_enableScaProc = Y;
+%mend usage_setPaths;
+%usage_setPaths
+
 /* Initialize the collection and open the output file */
 %util_initScaproc(p_enableFlagName=g_enableScaProc
 , p_outFilePath=%str(&g_logsRoot)
@@ -20,7 +36,7 @@
 
 
 /** FOR CSV Files uploaded from Unix/MacOS **/
-FILENAME my_CSV "/home/anawarehousing/dotMySASProgram/output/usa.csv" TERMSTR=LF;
+FILENAME my_CSV "&g_outputRoot/usa.csv" TERMSTR=LF;
 
 /** Import the CSV file.  **/
 PROC IMPORT DATAFILE=my_CSV
@@ -33,7 +49,7 @@ RUN;
 FILENAME my_CSV;
 
 /** Import an XLSX file.  **/
-PROC IMPORT DATAFILE="/home/anawarehousing/large_data/Motor_Vehicle_Collisions_-_Crashes_3.xlsx"
+PROC IMPORT DATAFILE="&g_dataRoot/Motor_Vehicle_Collisions_-_Crashes_3.xlsx"
 		    OUT=WORK.MYEXCEL
 		    DBMS=XLSX
 		    REPLACE;
