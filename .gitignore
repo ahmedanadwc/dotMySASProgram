@@ -1,0 +1,10 @@
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
+
+
+#Ignore vscode AI rules
+.github\instructions\codacy.instructions.md
+.github/instructions/codacy.instructions.md
+/graphify-out
+/logs
+/output

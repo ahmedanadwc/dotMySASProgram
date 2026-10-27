@@ -3,15 +3,16 @@
   @brief Regression tests for %util_parseScaproc and %util_scaText2graphvizDot.
   @details Expects the global macro variables below to be set by the caller
   (tests/run_tests.py does this):
-    g_codeRoot  - folder holding the macro files
+    g_sasMacroRoot  - folder holding the macro files
     g_testRoot  - writable scratch folder for recordings and .dot output
   Each assertion logs one TEST_PASS:/TEST_FAIL: line.
 **/
-
-%include "&g_codeRoot/util_initscaproc.sas";
-%include "&g_codeRoot/util_termscaproc.sas";
-%include "&g_codeRoot/util_parsescaproc.sas";
-%include "&g_codeRoot/util_scatext2graphvizdot.sas";
+/*
+%include "&g_sasMacroRoot/util_initscaproc.sas";
+%include "&g_sasMacroRoot/util_termscaproc.sas";
+%include "&g_sasMacroRoot/util_parsescaproc.sas";
+%include "&g_sasMacroRoot/util_scatext2graphvizdot.sas";
+*/
 %include "&g_testRoot/test_framework.sas";
 
 %t_cleanDir(p_dir=&g_testRoot)
