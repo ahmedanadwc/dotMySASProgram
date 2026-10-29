@@ -37,6 +37,7 @@
 	g_sasProgramRoot /* Location of custom SAS Program files  */
 	g_sasMacroRoot  /* Location of custom SAS Macro Files */
 	g_logsRoot  	/* Location of logs Files */
+	g_testRoot  	/* Location of test Files */
 	;
 /* ------------------------------- */
 /* Host and Environment Parameters */
@@ -68,6 +69,7 @@
 %let g_sasMacroRoot    = &g_sasCodeRoot.&g_slash.macros;
 %let g_outputRoot      = &g_projRootPath.&g_slash.output;
 %let g_logsRoot        = &g_projRootPath.&g_slash.logs;
+%let g_testRoot        = &g_projRootPath.&g_slash.tests&g_slash.sas;
 
 OPTIONS 
 	SASAUTOS = (&g_sasauto , "&g_sasMacroRoot")
