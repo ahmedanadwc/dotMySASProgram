@@ -1,3 +1,87 @@
+/**
+  @file util_parsescaproc.sas
+  @brief Parses out the output generated SAS Code Analyzer.
+  @details Parses out the output generated SAS Code Analyzer,
+  and generated *.dot output file, that could be rendered by any
+  Graphviz (https://www.graphviz.org/) Viewer/Renderer be it
+    - Web Viewer: http://webgraphviz.com/
+    - VS Code extension: Graphviz (dot) language support for Visual Studio Code
+      (https://marketplace.visualstudio.com/items?itemName=joaompinto.vscode-graphviz)
+
+  The inspiration for this code originted from
+    - Code presented in
+      "Automatically create diagrams showing the structure and performance of your SAS code"
+      https://support.sas.com/resources/papers/proceedings17/1104-2017.pdf
+      https://github.com/philipmason/Wood-Street-Consultants/tree/main/SCAPROC/SAS
+    - Code presented in
+      "SCAPROC Impact Analysis - Providing QA and Compliance Insights"
+      https://www.lexjansen.com/phuse/2016/tt/TT02.pdf
+      Sample 58878: SAS® Life Science Analytics Framework - 
+      SCAPROC Impact Analysis: Providing QA and Compliance Insights
+      https://support.sas.com/kb/58/878.html
+      https://support.sas.com/kb/58/047.html
+    - Code presented in
+      "QA and Compliance Insights Using the SCAPROC Procedure"
+      https://www.pharmasug.org/proceedings/2016/MS/PharmaSUG-2016-MS04.pdf
+    - SASjs generated lineage documentation
+      https://cli.sasjs.io/doc/
+      https://www.youtube.com/watch?v=Sb1DqTLgVyQ&t=182s
+      https://www.youtube.com/watch?v=9ea9vn7YmfM
+ 
+  Example usage:
+  
+      %util_parseScaproc(p_inScaprocFileName=
+      , p_outDotFilePath=%sysfunc(pathname(WORK))
+      , p_outDotFileName=mydigraph.dot
+      , p_outDsName=work.mydigraph
+      , p_includeAttrs_yn=Y, p_includeSteps_yn=Y)
+
+  @param [in] p_inScaprocFileName= The name of the SAS Code Analysis recording file. Required.
+  @param [in] p_outDotFilePath= The GRAPHVIZ (*.dot) output file path. Required. 
+                                Default: %sysfunc(pathname(WORK)).
+  @param [in] p_outDotFileName= The GRAPHVIZ (*.dot) output file name. Required.
+                                Default: mydigraph.dot
+  @param [in] p_outDsName= The output data set name of the parsing results. Optional.
+  @param [in] p_includeAttrs_yn= A Y/N flag to include table columns in the output. Default:Y.
+  @param [in] p_includeSteps_yn= A Y/N flag to include processing steps and elapse times in the output. 
+                                 Default:Y.
+  @param [in] p_rankDir= Sets direction of graph layout. Valid Values:TB|BT|LR|RL.
+                         Default:TB. Forced to LR when p_includeAttrs_yn=Y.
+  @param [in] p_outJsonFileName= Optional. When specified, a JSON graph is also written to
+                                 p_outDotFilePath/p_outJsonFileName, so that any graphing tool
+                                 (D3, Cytoscape, vis.js, networkx, ...) can render the DAG:
+
+                                     { "generator": "util_parseScaproc", "source": "<sca file>", "directed": true,
+                                       "nodes": [ { "id", "label", "type": "dataset|file|step",
+                                                    "columns": [ { "name", "type" } ],   (datasets, p_includeAttrs_yn=Y)
+                                                    "step": <n> } ],                     (steps)
+                                       "edges": [ { "source", "target", "type": "input|output|flow" } ] }
+
+                                 Step nodes and input/output edges are included when p_includeSteps_yn=Y;
+                                 otherwise edges link inputs directly to outputs (type "flow").
+                                 Column lists follow p_includeAttrs_yn.
+
+  @param [in] p_outDot_yn= A Y/N flag to write the GRAPHVIZ (*.dot) file and the p_outDsName data set.
+                           Set to N when only the JSON graph is needed; p_outJsonFileName is then
+                           required (rc 4 otherwise). Default:Y.
+
+  @param [in] p_dotTheme= The format of the GRAPHVIZ (*.dot) file. Valid Values:DEFAULT|SIMPLE. Default:DEFAULT.
+                          - DEFAULT: global "node [...]" style line, and grouped edges {"a" "b"} -> {"c"}.
+                          - SIMPLE: no global node defaults (every node carries its own shape/colour:
+                            tables for data sets, notes for files, ovals for steps) and one quoted
+                            "source" -> "target" statement per edge, which more tools can parse.
+
+  @return Global macro variable g_parseScaprocRC: 0 on success, non-zero on a validation error.
+
+  @param [in] p_debug= A Y/N flag to print diagnostic messages to the log. Default:N.
+
+  @n[util_parseScaproc Flow Diagram](../diagrams/util_parseScaproc.svg)
+
+  @version 9.4
+  @author Ahmed Al-Attar
+
+**/
+
 /* =====================================================================
    Internal stage macros for %util_parseScaproc (declared before it, in run order)
    ===================================================================== */
@@ -962,89 +1046,7 @@
 
 %mend inner_pscp_writeDot;
 
-/**
-  @file util_parsescaproc.sas
-  @brief Parses out the output generated SAS Code Analyzer.
-  @details Parses out the output generated SAS Code Analyzer,
-  and generated *.dot output file, that could be rendered by any
-  Graphviz (https://www.graphviz.org/) Viewer/Renderer be it
-    - Web Viewer: http://webgraphviz.com/
-    - VS Code extension: Graphviz (dot) language support for Visual Studio Code
-      (https://marketplace.visualstudio.com/items?itemName=joaompinto.vscode-graphviz)
 
-  The inspiration for this code originted from
-    - Code presented in
-      "Automatically create diagrams showing the structure and performance of your SAS code"
-      https://support.sas.com/resources/papers/proceedings17/1104-2017.pdf
-      https://github.com/philipmason/Wood-Street-Consultants/tree/main/SCAPROC/SAS
-    - Code presented in
-      "SCAPROC Impact Analysis - Providing QA and Compliance Insights"
-      https://www.lexjansen.com/phuse/2016/tt/TT02.pdf
-      Sample 58878: SAS® Life Science Analytics Framework - 
-      SCAPROC Impact Analysis: Providing QA and Compliance Insights
-      https://support.sas.com/kb/58/878.html
-      https://support.sas.com/kb/58/047.html
-    - Code presented in
-      "QA and Compliance Insights Using the SCAPROC Procedure"
-      https://www.pharmasug.org/proceedings/2016/MS/PharmaSUG-2016-MS04.pdf
-    - SASjs generated lineage documentation
-      https://cli.sasjs.io/doc/
-      https://www.youtube.com/watch?v=Sb1DqTLgVyQ&t=182s
-      https://www.youtube.com/watch?v=9ea9vn7YmfM
- 
-  Example usage:
-  
-      %util_parseScaproc(p_inScaprocFileName=
-      , p_outDotFilePath=%sysfunc(pathname(WORK))
-      , p_outDotFileName=mydigraph.dot
-      , p_outDsName=work.mydigraph
-      , p_includeAttrs_yn=Y, p_includeSteps_yn=Y)
-
-  @param [in] p_inScaprocFileName= The name of the SAS Code Analysis recording file. Required.
-  @param [in] p_outDotFilePath= The GRAPHVIZ (*.dot) output file path. Required. 
-                                Default: %sysfunc(pathname(WORK)).
-  @param [in] p_outDotFileName= The GRAPHVIZ (*.dot) output file name. Required.
-                                Default: mydigraph.dot
-  @param [in] p_outDsName= The output data set name of the parsing results. Optional.
-  @param [in] p_includeAttrs_yn= A Y/N flag to include table columns in the output. Default:Y.
-  @param [in] p_includeSteps_yn= A Y/N flag to include processing steps and elapse times in the output. 
-                                 Default:Y.
-  @param [in] p_rankDir= Sets direction of graph layout. Valid Values:TB|BT|LR|RL.
-                         Default:TB. Forced to LR when p_includeAttrs_yn=Y.
-  @param [in] p_outJsonFileName= Optional. When specified, a JSON graph is also written to
-                                 p_outDotFilePath/p_outJsonFileName, so that any graphing tool
-                                 (D3, Cytoscape, vis.js, networkx, ...) can render the DAG:
-
-                                     { "generator": "util_parseScaproc", "source": "<sca file>", "directed": true,
-                                       "nodes": [ { "id", "label", "type": "dataset|file|step",
-                                                    "columns": [ { "name", "type" } ],   (datasets, p_includeAttrs_yn=Y)
-                                                    "step": <n> } ],                     (steps)
-                                       "edges": [ { "source", "target", "type": "input|output|flow" } ] }
-
-                                 Step nodes and input/output edges are included when p_includeSteps_yn=Y;
-                                 otherwise edges link inputs directly to outputs (type "flow").
-                                 Column lists follow p_includeAttrs_yn.
-
-  @param [in] p_outDot_yn= A Y/N flag to write the GRAPHVIZ (*.dot) file and the p_outDsName data set.
-                           Set to N when only the JSON graph is needed; p_outJsonFileName is then
-                           required (rc 4 otherwise). Default:Y.
-
-  @param [in] p_dotTheme= The format of the GRAPHVIZ (*.dot) file. Valid Values:DEFAULT|SIMPLE. Default:DEFAULT.
-                          - DEFAULT: global "node [...]" style line, and grouped edges {"a" "b"} -> {"c"}.
-                          - SIMPLE: no global node defaults (every node carries its own shape/colour:
-                            tables for data sets, notes for files, ovals for steps) and one quoted
-                            "source" -> "target" statement per edge, which more tools can parse.
-
-  @return Global macro variable g_parseScaprocRC: 0 on success, non-zero on a validation error.
-
-  @param [in] p_debug= A Y/N flag to print diagnostic messages to the log. Default:N.
-
-  @n[util_parseScaproc Flow Diagram](../diagrams/util_parseScaproc.svg)
-
-  @version 9.4
-  @author Ahmed Al-Attar
-
-**/
 
 %MACRO util_parseScaproc(p_inScaprocFileName=
 , p_outDotFilePath=%sysfunc(pathname(WORK))
