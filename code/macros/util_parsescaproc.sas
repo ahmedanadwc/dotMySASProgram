@@ -10,7 +10,7 @@
   @param [in] p_byVarName= BY variable whose LAST. ends a group
   @param [in] p_byVarNames= full BY statement variable list
 **/
-  %MACRO pscp_getFlowDataSet(p_inDsName=
+  %macro inner_pscp_getFlowDataSet(p_inDsName=
     , p_outDsName=
     , p_byVarName=
     , p_byVarNames=);
@@ -56,14 +56,14 @@
       if (CATS(in_dsname,out_dsname,in_filename,out_filename,in_entity_name,out_entity_name) ne '') then
       OUTPUT;
     RUN;
-  %MEND pscp_getFlowDataSet;
+  %mend inner_pscp_getFlowDataSet;
 
 /**
   @brief Stage 1: reads the SCA text file; builds the concatenated-library format.
   @details Internal helper of %util_parseScaproc. Shares the caller's %LOCAL macro variables
   (l_*) and the WORK tables created by the preceding stages.
 **/
-%MACRO pscp_readRecording;
+%macro inner_pscp_readRecording;
 
   /* Read the SCA text file */
   DATA work.scadata(DROP=rc);
@@ -141,14 +141,14 @@
   PROC DELETE DATA=work.sca_libs; RUN;
 
 
-%MEND pscp_readRecording;
+%mend inner_pscp_readRecording;
 
 /**
   @brief Stage 2: extracts step inputs/outputs/names/run-times and the stepname. format.
   @details Internal helper of %util_parseScaproc. Shares the caller's %LOCAL macro variables
   (l_*) and the WORK tables created by the preceding stages.
 **/
-%MACRO pscp_extractIO;
+%macro inner_pscp_extractIO;
 
   /* Identify Input & Output data sets and their variables */
   DATA work.scadata1 (KEEP=scaline sca_linenum step )
@@ -280,14 +280,14 @@
   PROC FORMAT CNTLIN=WORK.STEP_NAMES(RENAME=(step=start step_name=label)); RUN;
 
 
-%MEND pscp_extractIO;
+%mend inner_pscp_extractIO;
 
 /**
   @brief Stage 3: builds the entity lookup, the per-step flow and the single-line DAG.
   @details Internal helper of %util_parseScaproc. Shares the caller's %LOCAL macro variables
   (l_*) and the WORK tables created by the preceding stages.
 **/
-%MACRO pscp_buildFlow;
+%macro inner_pscp_buildFlow;
 
   /** -------
   * Compose logical steps in_out flow
@@ -310,7 +310,7 @@
     CREATE TABLE work.unqEntity_fmtds AS
     SELECT DISTINCT 
        entity_name as start  length=210
-      ,CAT(STRIP(dsname),'_(',PUT(col_cnt,z3.),')') as label length=210
+      ,CAT(STRIP(dsname),'_(',PUT(col_cnt,z4.),')') as label length=210
       ,'$unqEntity' as fmtname
       ,'C' as type
     FROM 
@@ -365,7 +365,7 @@
   PROC SORT DATA=work.in_out_info_flow;
     BY step entity_name;
   RUN;
-  %pscp_getFlowDataSet(p_inDsName=work.in_out_info_flow
+  %inner_pscp_getFlowDataSet(p_inDsName=work.in_out_info_flow
   , p_outDsName=work.steps_in_out_flow
   , p_byVarName=ds_entity_name
   , p_byVarNames=%str(ds_step ds_entity_name))
@@ -428,7 +428,7 @@
     RUN;
 
     /* Merge the data into one record for each step */
-    %pscp_getFlowDataSet(p_inDsName=work.impExp_flow
+    %inner_pscp_getFlowDataSet(p_inDsName=work.impExp_flow
     , p_outDsName=work.impExp_flow2
     , p_byVarName=ds_step
     , p_byVarNames=%str(ds_step sca_linenum));
@@ -513,14 +513,14 @@
 
   PROC DELETE DATA=work.STEPS_IN_OUT_FLOW; RUN;
 
-%MEND pscp_buildFlow;
+%mend inner_pscp_buildFlow;
 
 /**
   @brief Stage 4: adds run-time durations to the stepname. format (p_includeSteps_yn=Y).
   @details Internal helper of %util_parseScaproc. Shares the caller's %LOCAL macro variables
   (l_*) and the WORK tables created by the preceding stages.
 **/
-%MACRO pscp_addRuntimes;
+%macro inner_pscp_addRuntimes;
 
   %if (&l_includeSteps_yn = Y) %then
   %do;
@@ -563,21 +563,16 @@
    DELETE step_names: step_runtimes:;
   QUIT; RUN;
 
-%MEND pscp_addRuntimes;
+%mend inner_pscp_addRuntimes;
 
 /**
   @brief Expression (for use in a DATA step) that JSON-escapes a character value.
   @param [in] p_val= character expression
 **/
-%MACRO pscp_jsonEsc(p_val);
+%macro inner_pscp_jsonEsc(p_val);
   tranwrd(tranwrd(strip(&p_val),'\','\\'),'"','\"')
-%MEND pscp_jsonEsc;
+%mend inner_pscp_jsonEsc;
 
-/**
-  @brief Stage 4b: writes the data flow as a node/edge JSON graph (p_outJsonFileName=).
-  @details Internal helper of %util_parseScaproc. Runs after pscp_addRuntimes and before pscp_writeDot,
-  while in_out_info_flow, unique_in_out_entities, pscp_stepio and the $unqEntity./stepname. formats exist.
-**/
 /**
   @brief Builds one edge per row (source, target, kind) from the per-step entity links.
   @details Internal helper of %util_parseScaproc, shared by the JSON writer and the SIMPLE DOT theme.
@@ -585,7 +580,7 @@
   @param [in] p_stepIdDs= data set with columns step, id (used when p_includeSteps_yn=Y)
   @param [out] p_outDsName= edges data set (source, target, kind), sorted by those columns
 **/
-%MACRO pscp_buildEdges(p_stepIdDs=, p_outDsName=);
+%macro inner_pscp_buildEdges(p_stepIdDs=, p_outDsName=);
 
   PROC SQL;
   %if (&l_includeSteps_yn EQ Y) %then
@@ -614,9 +609,14 @@
 
   PROC SORT DATA=&p_outDsName; BY source target kind; RUN;
 
-%MEND pscp_buildEdges;
+%mend inner_pscp_buildEdges;
 
-%MACRO pscp_writeJson;
+/**
+  @brief Stage 4b: writes the data flow as a node/edge JSON graph (p_outJsonFileName=).
+  @details Internal helper of %util_parseScaproc. Runs after pscp_addRuntimes and before pscp_writeDot,
+  while in_out_info_flow, unique_in_out_entities, pscp_stepio and the $unqEntity./stepname. formats exist.
+**/
+%macro inner_pscp_writeJson;
 
   %LOCAL l_jsonPath;
   %let l_jsonPath = &l_outDotFilePath/&l_outJsonFileName;
@@ -669,7 +669,7 @@
   %end;
   QUIT;
 
-  %pscp_buildEdges(p_stepIdDs=work.pscp_json_stepid, p_outDsName=work.pscp_json_edges)
+  %inner_pscp_buildEdges(p_stepIdDs=work.pscp_json_stepid, p_outDsName=work.pscp_json_edges)
 
   PROC SORT DATA=work.pscp_json_nodes; BY id; RUN;
   DATA work.pscp_json_nodes;   /* one node per id */
@@ -684,7 +684,7 @@
     FILE "&l_jsonPath" LRECL=32767;
     LENGTH line $32767;
     PUT '{';
-    line = CATS('"generator": "util_parseScaproc", "source": "', %pscp_jsonEsc("&l_inScaprocFileName"), '", "directed": true,');
+    line = CATS('"generator": "util_parseScaproc", "source": "', %inner_pscp_jsonEsc("&l_inScaprocFileName"), '", "directed": true,');
     PUT line;
     PUT '"nodes": [';
   RUN;
@@ -700,7 +700,7 @@
 
     IF (first.id) THEN
     DO;
-      line = CATS(IFC(nodeCnt > 0, ',', ' '), '{"id": "', %pscp_jsonEsc(id), '", "label": "', %pscp_jsonEsc(label)
+      line = CATS(IFC(nodeCnt > 0, ',', ' '), '{"id": "', %inner_pscp_jsonEsc(id), '", "label": "', %inner_pscp_jsonEsc(label)
                  , '", "type": "', type, '"');
       IF (step NE .) THEN line = CATS(line, ', "step": ', step);
       hasCols = (name NE '');
@@ -712,7 +712,7 @@
 
     IF (name NE '') THEN
     DO;
-      line = CATS(IFC(colCnt > 0, ',', ' '), '{"name": "', %pscp_jsonEsc(name), '", "type": "', %pscp_jsonEsc(coltype), '"}');
+      line = CATS(IFC(colCnt > 0, ',', ' '), '{"name": "', %inner_pscp_jsonEsc(name), '", "type": "', %inner_pscp_jsonEsc(coltype), '"}');
       PUT '  ' line;
       colCnt + 1;
     END;
@@ -735,7 +735,7 @@
     FILE "&l_jsonPath" LRECL=32767 MOD;
     SET work.pscp_json_edges;
     LENGTH line $32767;
-    line = CATS(IFC(_n_ > 1, ',', ' '), '{"source": "', %pscp_jsonEsc(source), '", "target": "', %pscp_jsonEsc(target)
+    line = CATS(IFC(_n_ > 1, ',', ' '), '{"source": "', %inner_pscp_jsonEsc(source), '", "target": "', %inner_pscp_jsonEsc(target)
                , '", "type": "', kind, '"}');
     PUT line;
   RUN;
@@ -746,14 +746,14 @@
     PUT '}';
   RUN;
 
-%MEND pscp_writeJson;
+%mend inner_pscp_writeJson;
 
 /**
   @brief Stage 5: composes the DOT directives and writes the .dot file and output data set.
   @details Internal helper of %util_parseScaproc. Shares the caller's %LOCAL macro variables
   (l_*) and the WORK tables created by the preceding stages.
 **/
-%MACRO pscp_writeDot;
+%macro inner_pscp_writeDot;
 
   %if (&l_outDot_yn = Y) %then
   %do;
@@ -859,7 +859,7 @@
     QUIT;
   %end;
 
-    %pscp_buildEdges(p_stepIdDs=work.pscp_dot_stepid, p_outDsName=work.pscp_dot_edges)
+    %inner_pscp_buildEdges(p_stepIdDs=work.pscp_dot_stepid, p_outDsName=work.pscp_dot_edges)
 
     DATA work._flow_dag_(KEEP=line);
       LENGTH line $32767;
@@ -960,7 +960,7 @@
     DELETE _flow_: in_out_info_flow single_line_dag unique_in_out_entities unqEntity_fmtds pscp_:;
   RUN; QUIT;
 
-%MEND pscp_writeDot;
+%mend inner_pscp_writeDot;
 
 /**
   @file util_parsescaproc.sas
@@ -1210,23 +1210,23 @@
   %let l_concatLibObsCount = 0;
 
   /* Stage 1: read the recording */
-  %pscp_readRecording
+  %inner_pscp_readRecording
 
   /* Stage 2: extract inputs, outputs, step names and run-times */
-  %pscp_extractIO
+  %inner_pscp_extractIO
 
   /* Stage 3: build the entity lookup and per-step data flow */
-  %pscp_buildFlow
+  %inner_pscp_buildFlow
 
   /* Stage 4: add run-time durations to the step names */
-  %pscp_addRuntimes
+  %inner_pscp_addRuntimes
 
   /* Stage 5: write the optional JSON graph, then the .dot file (which cleans up the shared tables) */
   %if (%superq(l_outJsonFileName) NE ) %then
   %do;
-    %pscp_writeJson
+    %inner_pscp_writeJson
   %end;
-  %pscp_writeDot
+  %inner_pscp_writeDot
 
   /* Remove the work formats created by this run so they can't leak into the next call */
   PROC CATALOG CAT=work.formats;
