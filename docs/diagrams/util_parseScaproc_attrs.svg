@@ -3,7 +3,7 @@
 <g id="graph0" class="graph" transform="translate(4,917.7999877929688) scale(1)" data-name="dag">
 
 <polygon fill="white" stroke="none" points="-4,4 -4,-917.8 6072.1,-917.8 6072.1,4 -4,4" style=""/>
-<text text-anchor="middle" x="3034.05" y="-8.2" font-family="Times,serif" font-size="14.00" style="">/home/anawarehousing/dotMySASProgram/logs/scaparse__util_parseScaproc.txt</text>
+<text text-anchor="middle" x="3034.05" y="-8.2" font-family="Times,serif" font-size="14.00" style="">util_parseScaproc</text>
 <!-- /home/anawarehousing/dotMySASProgram/logs/scaparse__util_parseScaproc.txt -->
 <g id="node1" class="node" pointer-events="visible" data-name="/home/anawarehousing/dotMySASProgram/logs/scaparse__util_parseScaproc.txt">
 
